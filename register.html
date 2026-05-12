@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+ 
+<a href="index.html" class="back-btn">← Back</a>
+
+<div class="auth-wrapper">
+    <div class="auth-container">
+
+        <h2>Create Account</h2>
+
+        <input id="regUser" placeholder="Username">
+        <input id="regEmail" placeholder="Email (optional)">
+        <input id="regPass" type="password" placeholder="Password">
+        <input id="regConfirm" type="password" placeholder="Confirm Password">
+
+        <button onclick="register()">Create Account</button>
+
+        <p id="errorMsg"></p>
+
+        <p>Already have an account? <a href="login.html">Login</a></p>
+
+    </div>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
