@@ -33,32 +33,71 @@ const CONFIG = {
             "document.addEventListener('keydown', (e) => { if(e.key === 'Escape') game.reset(); });"
         ],
         quotes: [] // Will be fetched from API
+    },
+    FINGER_MAP: {
+        '`': 'l-pinky', '1': 'l-pinky', 'q': 'l-pinky', 'a': 'l-pinky', 'z': 'l-pinky',
+        '2': 'l-ring', 'w': 'l-ring', 's': 'l-ring', 'x': 'l-ring',
+        '3': 'l-middle', 'e': 'l-middle', 'd': 'l-middle', 'c': 'l-middle',
+        '4': 'l-index', '5': 'l-index', 'r': 'l-index', 't': 'l-index', 'f': 'l-index', 'g': 'l-index', 'v': 'l-index', 'b': 'l-index',
+        '6': 'r-index', '7': 'r-index', 'y': 'r-index', 'u': 'r-index', 'h': 'r-index', 'j': 'r-index', 'n': 'r-index', 'm': 'r-index',
+        '8': 'r-middle', 'i': 'r-middle', 'k': 'r-middle', ',': 'r-middle',
+        '9': 'r-ring', 'o': 'r-ring', 'l': 'r-ring', '.': 'r-ring',
+        '0': 'r-pinky', '-': 'r-pinky', '=': 'r-pinky', 'p': 'r-pinky', '[': 'r-pinky', ']': 'r-pinky', '\\': 'r-pinky', 'enter': 'r-pinky', 'backspace': 'r-pinky', ';': 'r-pinky', "'": 'r-pinky', '/': 'r-pinky',
+        ' ': 'r-thumb'
     }
 };
 
 // ==========================================
 // 2. AUTHENTICATION MODULE
 // ==========================================
+// ==========================================
+// 2. AUTHENTICATION MODULE (PHP VERSION)
+// ==========================================
+let currentUser = null;
+let currentAvatar = 'default-avatar.png';
+
 const auth = {
-    getCurrentUser: () => localStorage.getItem("loggedUser") || "guest",
+    checkSession: async () => {
+        try {
+            const res = await fetch('auth.php?action=check');
+            const data = await res.json();
+            if (data.loggedIn) {
+                currentUser = data.username;
+                currentAvatar = data.avatar || 'default-avatar.png';
+            } else {
+                currentUser = null;
+                currentAvatar = 'default-avatar.png';
+            }
+            game.updateAuthUI();
+        } catch (e) { console.error("Session check failed", e); }
+    },
+
+    getCurrentUser: () => currentUser || "guest",
+    getAvatar: () => currentAvatar,
     
-    login: () => {
+    login: async () => {
         const user = document.getElementById('logUser').value.trim().toLowerCase();
         const pass = document.getElementById('logPass').value.trim();
         const error = document.getElementById('authError');
 
         if (!user || !pass) { error.textContent = "Please fill all fields."; return; }
         
-        const savedPass = localStorage.getItem(`user_${user}`);
-        if (savedPass === pass) {
-            localStorage.setItem("loggedUser", user);
-            window.location.href = "index.html";
-        } else {
-            error.textContent = "Invalid username or password.";
-        }
+        try {
+            const res = await fetch('auth.php?action=login', {
+                method: 'POST',
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            const result = await res.json();
+            if (result.success) {
+                currentUser = result.username;
+                window.location.href = "index.html";
+            } else {
+                error.textContent = result.message;
+            }
+        } catch (e) { error.textContent = "Login server error."; }
     },
 
-    register: () => {
+    register: async () => {
         const user = document.getElementById('regUser').value.trim().toLowerCase();
         const pass = document.getElementById('regPass').value.trim();
         const confirm = document.getElementById('regConfirm').value.trim();
@@ -66,99 +105,136 @@ const auth = {
 
         if (!user || !pass || !confirm) { error.textContent = "All fields are required."; return; }
         if (pass !== confirm) { error.textContent = "Passwords do not match."; return; }
-        if (localStorage.getItem(`user_${user}`)) { error.textContent = "Username already taken."; return; }
 
-        localStorage.setItem(`user_${user}`, pass);
-        // Initialize default stats
-        stats.initUserData(user);
-        
-        alert("Account created! You can now sign in.");
-        document.getElementById('regForm').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'block';
+        try {
+            const res = await fetch('auth.php?action=register', {
+                method: 'POST',
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert("Account created! You can now sign in.");
+                document.getElementById('regForm').style.display = 'none';
+                document.getElementById('loginForm').style.display = 'block';
+            } else {
+                error.textContent = result.message;
+            }
+        } catch (e) { error.textContent = "Registration server error."; }
     },
 
-    logout: () => {
-        localStorage.removeItem("loggedUser");
-        // Seamlessly update UI without redirecting
+    logout: async () => {
+        await fetch('auth.php?action=logout');
+        currentUser = null;
         game.updateAuthUI();
         ui.showNotification("Logged out. Switched to Guest mode.");
         
-        // Close settings if open
-        const modal = document.getElementById('settingsModal');
-        if (modal) modal.style.display = 'none';
-
-        // If on dashboard, refresh stats for guest
         if (window.location.pathname.includes("dashboard.html")) {
-            stats.initDashboard();
+            window.location.href = "index.html";
         }
     },
 
-    saveSettings: () => {
+    saveSettings: async () => {
         const user = auth.getCurrentUser();
         const newName = document.getElementById('setUserName').value.trim();
-        const newCountry = document.getElementById('setUserCountry').value.trim();
-        const oldPassInput = document.getElementById('confirmOldPass').value.trim();
         const newPass = document.getElementById('setNewPass').value.trim();
+        const oldPass = document.getElementById('confirmOldPass').value.trim();
 
-        const data = stats.getData();
-        
-        // Handle Password Change Verification
-        if (newPass && user !== "guest") {
-            const actualOldPass = localStorage.getItem(`user_${user}`);
-            if (oldPassInput !== actualOldPass) {
-                ui.showNotification("Security: Old password incorrect.");
-                return;
+        if (user === "guest") {
+            ui.showNotification("Guests cannot change settings.");
+            return;
+        }
+
+        try {
+            const res = await fetch('auth.php?action=update_profile', {
+                method: 'POST',
+                body: JSON.stringify({
+                    displayName: newName,
+                    newPassword: newPass,
+                    oldPassword: oldPass
+                })
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+                ui.showNotification("Settings saved successfully!");
+                ui.toggleSettings();
+            } else {
+                ui.showNotification("Error: " + result.message);
             }
-            localStorage.setItem(`user_${user}`, newPass);
-            ui.showNotification("Password updated successfully.");
+        } catch (e) {
+            ui.showNotification("Server error while saving settings.");
         }
+    },
 
-        if (newName && user !== "guest") {
-            data.displayName = newName;
+    uploadAvatar: async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        try {
+            const res = await fetch('upload.php', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await res.json();
+            if (result.success) {
+                currentAvatar = result.avatar;
+                game.updateAuthUI();
+                ui.showNotification("Profile picture updated!");
+            } else {
+                ui.showNotification("Upload failed: " + result.message);
+            }
+        } catch (e) {
+            ui.showNotification("Server error during upload.");
         }
-        data.country = newCountry;
-
-        stats.saveData(data);
-        ui.showNotification("Settings saved!");
-        ui.toggleSettings();
-        game.updateAuthUI();
     }
 };
 
 // ==========================================
 // 3. STATS & ANALYTICS MODULE
 // ==========================================
+// ==========================================
+// 3. STATS & ANALYTICS MODULE (PHP VERSION)
+// ==========================================
 const stats = {
-    initUserData: (user) => {
-        const defaults = {
-            xp: 0,
-            level: 1,
-            bestWpm: 0,
-            bestAcc: 0,
-            history: []
-        };
-        localStorage.setItem(`stats_${user}`, JSON.stringify(defaults));
-    },
+    cachedData: null,
 
-    getData: () => {
+    getData: async () => {
         const user = auth.getCurrentUser();
-        return JSON.parse(localStorage.getItem(`stats_${user}`)) || { xp: 0, level: 1, bestWpm: 0, bestAcc: 0, history: [] };
-    },
-
-    saveData: (data) => {
-        const user = auth.getCurrentUser();
-        localStorage.setItem(`stats_${user}`, JSON.stringify(data));
-    },
-
-    addMatch: (wpm, acc) => {
-        const user = auth.getCurrentUser();
-        
-        // Initialize guest data if needed
-        if (user === "guest" && !localStorage.getItem(`stats_guest`)) {
-            stats.initUserData("guest");
+        if (user === "guest") {
+            return JSON.parse(localStorage.getItem(`stats_guest`)) || { xp: 0, level: 1, bestWpm: 0, bestAcc: 0, history: [] };
         }
 
-        const data = stats.getData();
+        try {
+            const res = await fetch('stats.php?action=load');
+            const result = await res.json();
+            if (result.success) {
+                return result.data;
+            }
+        } catch (e) { console.error("Failed to load stats", e); }
+        
+        return { xp: 0, level: 1, bestWpm: 0, bestAcc: 0, history: [] };
+    },
+
+    saveData: async (data) => {
+        const user = auth.getCurrentUser();
+        if (user === "guest") {
+            localStorage.setItem(`stats_guest`, JSON.stringify(data));
+            return;
+        }
+
+        try {
+            await fetch('stats.php?action=save', {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+        } catch (e) { console.error("Failed to save stats", e); }
+    },
+
+    addMatch: async (wpm, acc) => {
+        const data = await stats.getData();
         
         // XP Calculation: WPM * Accuracy
         const xpGained = Math.round(wpm * (acc / 100) * 10);
@@ -179,11 +255,11 @@ const stats = {
         data.history.push({ wpm, acc, date: new Date().toLocaleDateString() });
         if (data.history.length > CONFIG.MAX_HISTORY) data.history.shift();
 
-        stats.saveData(data);
+        await stats.saveData(data);
     },
 
-    initDashboard: () => {
-        const data = stats.getData();
+    initDashboard: async () => {
+        const data = await stats.getData();
         const user = auth.getCurrentUser();
 
         document.getElementById('userName').textContent = user.charAt(0).toUpperCase() + user.slice(1);
@@ -191,7 +267,10 @@ const stats = {
 
         if (user === "guest" && document.getElementById('guestNotice')) {
             document.getElementById('guestNotice').style.display = 'block';
+        } else if (document.getElementById('guestNotice')) {
+            document.getElementById('guestNotice').style.display = 'none';
         }
+
         document.getElementById('xpText').textContent = `${data.xp} / ${data.level * CONFIG.LEVEL_XP}`;
         document.getElementById('xpFill').style.width = `${(data.xp / (data.level * CONFIG.LEVEL_XP)) * 100}%`;
         document.getElementById('bestWpm').textContent = data.bestWpm;
@@ -199,8 +278,8 @@ const stats = {
 
         // Render Activity Log
         const log = document.getElementById('activityLog');
-        if (data.history.length > 0) {
-            log.innerHTML = data.history.reverse().map(m => `
+        if (data.history && data.history.length > 0) {
+            log.innerHTML = [...data.history].reverse().map(m => `
                 <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--surface-border);">
                     <span>${m.date}</span>
                     <span style="font-weight: 700;">${m.wpm} WPM <span style="color:var(--text-dim); font-weight: 400;">(${m.acc}%)</span></span>
@@ -209,30 +288,32 @@ const stats = {
         }
 
         // Render Chart
-        const ctx = document.getElementById('performanceChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.history.map(h => h.date),
-                datasets: [{
-                    label: 'WPM',
-                    data: data.history.map(h => h.wpm),
-                    borderColor: '#8b5cf6',
-                    tension: 0.4,
-                    fill: true,
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { grid: { display: false } }
+        if (document.getElementById('performanceChart')) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.history.map(h => h.date),
+                    datasets: [{
+                        label: 'WPM',
+                        data: data.history.map(h => h.wpm),
+                        borderColor: '#8b5cf6',
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)'
+                    }]
                 },
-                plugins: { legend: { display: false } }
-            }
-        });
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
     }
 };
 
@@ -243,12 +324,14 @@ const ui = {
     updateStats: (wpm, acc, streak, time) => {
         document.getElementById('wpm').textContent = wpm;
         document.getElementById('accuracy').textContent = `${acc}%`;
-        document.getElementById('streak').textContent = streak;
+        const streakEl = document.getElementById('streak');
+        if (streakEl) streakEl.textContent = streak;
         if (time !== null) document.getElementById('timer').textContent = `${time}s`;
     },
 
     highlightKey: (key) => {
-        const el = document.querySelector(`.key[data-key="${key.toLowerCase()}"]`);
+        const k = key.toLowerCase();
+        const el = document.querySelector(`.key[data-key="${k}"]`);
         if (el) {
             el.classList.add('active');
             setTimeout(() => el.classList.remove('active'), 100);
@@ -306,20 +389,7 @@ const ui = {
     },
 
     handleProfileUpload: (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const base64 = event.target.result;
-            document.getElementById('profilePreview').innerHTML = `<img src="${base64}">`;
-            
-            const data = stats.getData();
-            data.profilePic = base64;
-            stats.saveData(data);
-            ui.showNotification("Profile photo updated!");
-        };
-        reader.readAsDataURL(file);
+        auth.uploadAvatar(e);
     }
 };
 
@@ -363,6 +433,32 @@ const game = {
             });
         }
 
+        // Ensure nav links update
+        game.updateAuthUI();
+
+        // Mode descriptions
+        const modeSelect = document.getElementById('modeSelect');
+        const modeDesc = document.getElementById('modeDescription');
+        
+        const descriptions = {
+            normal: "⏱ **Timed:** Test your speed in a standard 60-second sprint.",
+            zen: "🧘 **Untimed:** Relaxed practice with no timer. Focus on your rhythm.",
+            hardcore: "🎯 **Perfect:** The ultimate challenge. One wrong character and you fail immediately."
+        };
+
+        modeSelect.addEventListener('mouseenter', () => {
+            modeDesc.innerHTML = descriptions[modeSelect.value];
+            modeDesc.style.display = 'block';
+        });
+
+        modeSelect.addEventListener('mouseleave', () => {
+            modeDesc.style.display = 'none';
+        });
+
+        modeSelect.addEventListener('change', () => {
+            modeDesc.innerHTML = descriptions[modeSelect.value];
+        });
+
         if (!startBtn) return;
 
         startBtn.addEventListener('click', () => game.start());
@@ -376,25 +472,35 @@ const game = {
                 if (game.isPlaying) inputBox.focus();
             });
         }
-        
-        // Ensure nav links update
-        game.updateAuthUI();
     },
 
     updateAuthUI: () => {
-        const loggedUser = localStorage.getItem("loggedUser");
+        const user = auth.getCurrentUser();
         const loginBtn = document.getElementById('loginBtn');
         const signupBtn = document.getElementById('signupBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const settingsBtn = document.getElementById('settingsBtn');
-        const userNameDisplay = document.getElementById('userLabel'); 
+        const userNameDisplay = document.getElementById('userNameSpan'); 
+        const avatar = auth.getAvatar();
 
-        if (loggedUser) {
+        // Update all profile images on the page
+        const avatarUrl = avatar === 'default-avatar.png' ? null : 'uploads/' + avatar;
+        const profileElements = document.querySelectorAll('.profile-img-lg, .profile-img');
+        
+        profileElements.forEach(el => {
+            if (avatarUrl) {
+                el.innerHTML = `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            } else {
+                el.innerHTML = `<i class="fas fa-user-circle"></i>`;
+            }
+        });
+
+        if (user !== "guest") {
             if (loginBtn) loginBtn.style.display = 'none';
             if (signupBtn) signupBtn.style.display = 'none';
             if (logoutBtn) logoutBtn.style.display = 'block';
             if (settingsBtn) settingsBtn.style.display = 'block';
-            if (userNameDisplay) userNameDisplay.textContent = `Player: ${loggedUser}`;
+            if (userNameDisplay) userNameDisplay.textContent = `Player: ${user}`;
         } else {
             if (loginBtn) loginBtn.style.display = 'block';
             if (signupBtn) signupBtn.style.display = 'block';
@@ -517,27 +623,26 @@ const game = {
         const lastChar = val.slice(-1);
         ui.highlightKey(lastChar);
 
-        // Play Sound (Synthesized Click)
+        // Play Sound (Local MP3 with Synthesis Fallback)
         if (game.soundEnabled && val.length > game.typed.length) {
-            if (game.audioCtx) {
-                if (game.audioCtx.state === 'suspended') game.audioCtx.resume();
-                
-                const osc = game.audioCtx.createOscillator();
-                const gain = game.audioCtx.createGain();
-                
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(150, game.audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(40, game.audioCtx.currentTime + 0.1);
-                
-                gain.gain.setValueAtTime(0.1, game.audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, game.audioCtx.currentTime + 0.1);
-                
-                osc.connect(gain);
-                gain.connect(game.audioCtx.destination);
-                
-                osc.start();
-                osc.stop(game.audioCtx.currentTime + 0.1);
-            }
+            const clack = new Audio("./clack.mp3");
+            clack.volume = 0.5;
+            clack.play().catch(e => {
+                // FALLBACK: If local file is missing, use synthesized clack
+                if (game.audioCtx) {
+                    if (game.audioCtx.state === 'suspended') game.audioCtx.resume();
+                    const now = game.audioCtx.currentTime;
+                    const osc = game.audioCtx.createOscillator();
+                    const g = game.audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    g.gain.setValueAtTime(0.1, now);
+                    g.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.connect(g); g.connect(game.audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.1);
+                }
+            });
         }
 
         // Hardcore check
@@ -604,7 +709,7 @@ const game = {
         return Math.round((game.correctChars / game.typed.length) * 100);
     },
 
-    end: (failed = false) => {
+    end: async (failed = false) => {
         clearInterval(game.timer);
         game.isPlaying = false;
         document.getElementById('inputBox').disabled = true;
@@ -614,7 +719,7 @@ const game = {
         } else {
             const wpm = game.calculateWpm();
             const acc = game.calculateAcc();
-            stats.addMatch(wpm, acc);
+            await stats.addMatch(wpm, acc);
             ui.showNotification(`Great job! ${wpm} WPM attained.`);
             
             // CONFETTI!
@@ -650,6 +755,10 @@ const game = {
 // ==========================================
 // INITIALIZATION
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+// ==========================================
+// INITIALIZATION
+// ==========================================
+document.addEventListener('DOMContentLoaded', async () => {
+    await auth.checkSession();
     game.init();
 });

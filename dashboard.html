@@ -14,10 +14,15 @@
         <div class="logo">
             <i class="fas fa-bolt"></i>
             <span>TypeFlow</span>
+            <span id="userLabel" style="font-size: 0.9rem; color: var(--text-dim); margin-left: 15px;">
+                <i class="fas fa-user-circle"></i> <span id="userNameSpan">Player: Guest</span>
+            </span>
         </div>
         <div class="nav-links">
             <a href="index.html" class="btn-outline"><i class="fas fa-keyboard"></i> Training</a>
-            <button onclick="auth.logout()" class="btn-outline"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <a href="login.html" class="btn-outline" id="loginBtn" style="display: none;">Login</a>
+            <a href="login.html?mode=register" class="btn-primary" id="signupBtn" style="display: none;">Create Account</a>
+            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display: none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </nav>
 
@@ -89,9 +94,9 @@
     <script src="script.js"></script>
     <script>
         // Dashboard specific initialization
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             // Allow guests to view dashboard
-            stats.initDashboard();
+            await stats.initDashboard();
         });
     </script>
 </body>

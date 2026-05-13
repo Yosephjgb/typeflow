@@ -104,6 +104,16 @@ h1, h2, h3 {
     transform: translateY(0);
 }
 
+select.btn-outline {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
 .btn-outline {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--surface-border);
@@ -112,13 +122,6 @@ h1, h2, h3 {
     border-radius: 12px;
     cursor: pointer;
     transition: var(--transition);
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 16px;
-    padding-right: 40px;
 }
 
 .btn-outline:hover {
@@ -307,6 +310,15 @@ select.btn-outline option {
 
 .key.wide { width: 80px; }
 .key.extra-wide { width: 280px; }
+
+/* Finger Colors */
+.key-pinky { border-color: #3b82f6; color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
+.key-ring { border-color: #10b981; color: #10b981; background: rgba(16, 185, 129, 0.05); }
+.key-middle { border-color: #f59e0b; color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+.key-index { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+.key-thumb { border-color: #8b5cf6; color: #8b5cf6; background: rgba(139, 92, 246, 0.05); }
+
+
 
 /* ============================================================
    DASHBOARD & CHARTS

@@ -17,6 +17,9 @@
         <div class="logo">
             <i class="fas fa-bolt"></i>
             <span>TypeFlow</span>
+            <span id="userLabel" style="font-size: 0.9rem; color: var(--text-dim); margin-left: 15px;">
+                <i class="fas fa-user-circle"></i> <span id="userNameSpan">Player: Guest</span>
+            </span>
         </div>
         <div class="nav-links" id="navLinks">
             <!-- Dynamic links based on auth state -->
@@ -24,8 +27,9 @@
             <button onclick="ui.toggleSettings()" class="btn-outline" id="settingsBtn">
                 <i class="fas fa-cog"></i>
             </button>
-            <a href="login.html" class="btn-outline" id="loginBtn">Login</a>
-            <a href="login.html?mode=register" class="btn-primary" id="signupBtn">Create Account</a>
+            <a href="login.html" class="btn-outline" id="loginBtn" style="display: none;">Login</a>
+            <a href="login.html?mode=register" class="btn-primary" id="signupBtn" style="display: none;">Create Account</a>
+            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display: none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </nav>
 
@@ -41,10 +45,7 @@
                 <div class="stat-label">Accuracy</div>
                 <div class="stat-value secondary" id="accuracy">0%</div>
             </div>
-            <div class="stat-item glass-panel">
-                <div class="stat-label">Current Streak</div>
-                <div class="stat-value" id="streak">0</div>
-            </div>
+
             <div class="stat-item glass-panel">
                 <div class="stat-label">Time Remaining</div>
                 <div class="stat-value" id="timer">60s</div>
@@ -57,13 +58,16 @@
             <div class="game-settings" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
                 <div class="setting-group" style="display: flex; gap: 10px;">
                     <select id="modeSelect" class="btn-outline">
-                        <option value="normal">⏱ Normal (60s)</option>
-                        <option value="zen">🧘 Zen Mode</option>
-                        <option value="hardcore">💀 Hardcore</option>
+                        <option value="normal">⏱ Timed (60s)</option>
+                        <option value="zen">🧘 Untimed (Relaxed)</option>
+                        <option value="hardcore">🎯 Perfect (No Mistakes)</option>
                     </select>
                     <button id="soundToggle" class="btn-outline" title="Toggle Typing Sounds">
                         🔊 Sound: ON
                     </button>
+                </div>
+                <div id="modeDescription" class="glass-panel" style="position: absolute; top: 70px; left: 0; padding: 10px 20px; font-size: 0.85rem; display: none; z-index: 100; max-width: 300px; border-color: var(--primary);">
+                    <!-- Description will be injected here -->
                 </div>
                 <div class="setting-group">
                     <select id="categorySelect" class="btn-outline">
@@ -105,19 +109,76 @@
         <div class="keyboard" id="keyboard">
             <!-- Row 1 -->
             <div class="keyboard-row">
-                <div class="key" data-key="q">Q</div><div class="key" data-key="w">W</div><div class="key" data-key="e">E</div><div class="key" data-key="r">R</div><div class="key" data-key="t">T</div><div class="key" data-key="y">Y</div><div class="key" data-key="u">U</div><div class="key" data-key="i">I</div><div class="key" data-key="o">O</div><div class="key" data-key="p">P</div>
+                <div class="key key-pinky" data-key="`">`</div>
+                <div class="key key-pinky" data-key="1">1</div>
+                <div class="key key-ring" data-key="2">2</div>
+                <div class="key key-middle" data-key="3">3</div>
+                <div class="key key-index" data-key="4">4</div>
+                <div class="key key-index" data-key="5">5</div>
+                <div class="key key-index" data-key="6">6</div>
+                <div class="key key-index" data-key="7">7</div>
+                <div class="key key-middle" data-key="8">8</div>
+                <div class="key key-ring" data-key="9">9</div>
+                <div class="key key-pinky" data-key="0">0</div>
+                <div class="key key-pinky" data-key="-">-</div>
+                <div class="key key-pinky" data-key="=">=</div>
+                <div class="key key-pinky wide" data-key="backspace">BS</div>
             </div>
             <!-- Row 2 -->
             <div class="keyboard-row">
-                <div class="key" data-key="a">A</div><div class="key" data-key="s">S</div><div class="key" data-key="d">D</div><div class="key" data-key="f">F</div><div class="key" data-key="g">G</div><div class="key" data-key="h">H</div><div class="key" data-key="j">J</div><div class="key" data-key="k">K</div><div class="key" data-key="l">L</div>
+                <div class="key key-pinky wide">Tab</div>
+                <div class="key key-pinky" data-key="q">Q</div>
+                <div class="key key-ring" data-key="w">W</div>
+                <div class="key key-middle" data-key="e">E</div>
+                <div class="key key-index" data-key="r">R</div>
+                <div class="key key-index" data-key="t">T</div>
+                <div class="key key-index" data-key="y">Y</div>
+                <div class="key key-index" data-key="u">U</div>
+                <div class="key key-middle" data-key="i">I</div>
+                <div class="key key-ring" data-key="o">O</div>
+                <div class="key key-pinky" data-key="p">P</div>
+                <div class="key key-pinky" data-key="[">[</div>
+                <div class="key key-pinky" data-key="]">]</div>
+                <div class="key key-pinky" data-key="\">\</div>
             </div>
             <!-- Row 3 -->
             <div class="keyboard-row">
-                <div class="key" data-key="z">Z</div><div class="key" data-key="x">X</div><div class="key" data-key="c">C</div><div class="key" data-key="v">V</div><div class="key" data-key="b">B</div><div class="key" data-key="n">N</div><div class="key" data-key="m">M</div>
+                <div class="key key-pinky wide">Caps</div>
+                <div class="key key-pinky" data-key="a">A</div>
+                <div class="key key-ring" data-key="s">S</div>
+                <div class="key key-middle" data-key="d">D</div>
+                <div class="key key-index" data-key="f">F</div>
+                <div class="key key-index" data-key="g">G</div>
+                <div class="key key-index" data-key="h">H</div>
+                <div class="key key-index" data-key="j">J</div>
+                <div class="key key-middle" data-key="k">K</div>
+                <div class="key key-ring" data-key="l">L</div>
+                <div class="key key-pinky" data-key=";">;</div>
+                <div class="key key-pinky" data-key="'">'</div>
+                <div class="key key-pinky wide" data-key="enter">Enter</div>
             </div>
             <!-- Row 4 -->
             <div class="keyboard-row">
-                <div class="key extra-wide" data-key=" ">SPACE</div>
+                <div class="key key-pinky wide">Shift</div>
+                <div class="key key-pinky" data-key="z">Z</div>
+                <div class="key key-ring" data-key="x">X</div>
+                <div class="key key-middle" data-key="c">C</div>
+                <div class="key key-index" data-key="v">V</div>
+                <div class="key key-index" data-key="b">B</div>
+                <div class="key key-index" data-key="n">N</div>
+                <div class="key key-index" data-key="m">M</div>
+                <div class="key key-pinky" data-key=",">,</div>
+                <div class="key key-pinky" data-key=".">.</div>
+                <div class="key key-pinky" data-key="/">/</div>
+                <div class="key key-pinky wide">Shift</div>
+            </div>
+            <!-- Row 5 -->
+            <div class="keyboard-row">
+                <div class="key key-pinky wide">Ctrl</div>
+                <div class="key key-pinky">Alt</div>
+                <div class="key key-thumb extra-wide" data-key=" ">SPACE</div>
+                <div class="key key-pinky">Alt</div>
+                <div class="key key-pinky wide">Ctrl</div>
             </div>
         </div>
 
@@ -180,6 +241,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="script.js"></script>
+    <script src="script.js?v=2"></script>
 </body>
 </html>
