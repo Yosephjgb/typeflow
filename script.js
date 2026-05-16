@@ -390,6 +390,42 @@ const ui = {
 
     handleProfileUpload: (e) => {
         auth.uploadAvatar(e);
+    },
+
+    renderHeatmap: (missedKeys) => {
+        const container = document.getElementById('heatmapKeyboard');
+        if (!container) return;
+
+        const maxMisses = Math.max(...Object.values(missedKeys), 1);
+        const rows = [
+            ['`','1','2','3','4','5','6','7','8','9','0','-','=','BS'],
+            ['Tab','q','w','e','r','t','y','u','i','o','p','[',']','\\'],
+            ['Caps','a','s','d','f','g','h','j','k','l',';',"'",'Enter'],
+            ['Shift','z','x','c','v','b','n','m',',','.','/','Shift'],
+            ['Ctrl','Alt',' ','Alt','Ctrl']
+        ];
+        const wideKeys = new Set(['BS','Tab','Caps','Enter','Shift','Ctrl','Alt']);
+        const extraWide = new Set([' ']);
+
+        container.innerHTML = rows.map(row => `
+            <div style="display:flex; gap:5px; margin-bottom:5px; justify-content:center; flex-wrap:nowrap;">
+                ${row.map(k => {
+                    const lookup = k.toLowerCase() === 'space' ? ' ' : k.toLowerCase();
+                    const count = missedKeys[lookup] || 0;
+                    const intensity = count / maxMisses;
+                    const bg = count > 0
+                        ? `rgba(239,68,68,${0.2 + intensity * 0.8})`
+                        : 'rgba(255,255,255,0.03)';
+                    const border = count > 0 ? `rgba(239,68,68,${0.4 + intensity * 0.6})` : 'rgba(255,255,255,0.1)';
+                    const label = k === ' ' ? 'SPACE' : k;
+                    const minW = extraWide.has(k) ? '120px' : wideKeys.has(k) ? '52px' : '32px';
+                    const title = count > 0 ? `title="${label}: ${count} miss${count>1?'es':''}"` : '';
+                    return `<div ${title} style="min-width:${minW}; height:32px; background:${bg}; border:1px solid ${border}; border-radius:5px; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:0.65rem; color:${count>0?'#fff':'#94a3b8'}; position:relative; cursor:default; white-space:nowrap; padding:0 4px;">
+                        ${label}${count > 0 ? `<span style="position:absolute;top:-6px;right:-4px;background:#ef4444;color:#fff;border-radius:8px;font-size:0.5rem;padding:1px 3px;">${count}</span>` : ''}
+                    </div>`;
+                }).join('')}
+            </div>
+        `).join('');
     }
 };
 
@@ -408,6 +444,9 @@ const game = {
     soundEnabled: localStorage.getItem('soundEnabled') !== 'false',
     audioCtx: null,
     audioBuffer: null,
+    missedKeys: {},       // NEW: track missed key counts
+    wpmHistory: [],       // NEW: wpm snapshots for results chart
+    wpmHistoryTimer: null,// NEW: interval for wpm snapshots
 
     init: () => {
         const startBtn = document.getElementById('startBtn');
@@ -457,6 +496,10 @@ const game = {
 
         modeSelect.addEventListener('change', () => {
             modeDesc.innerHTML = descriptions[modeSelect.value];
+            const timerSelect = document.getElementById('timerSelect');
+            if (timerSelect) {
+                timerSelect.style.display = CONFIG.MODES[modeSelect.value].hasTimer ? '' : 'none';
+            }
         });
 
         if (!startBtn) return;
@@ -543,11 +586,17 @@ const game = {
         game.typed = "";
         game.streak = 0;
         game.correctChars = 0;
+        game.missedKeys = {};
+        game.wpmHistory = [];
+        clearInterval(game.wpmHistoryTimer);
         
         const mode = document.getElementById('modeSelect').value;
         const category = document.getElementById('categorySelect').value;
+        const timerSelect = document.getElementById('timerSelect');
+        const customTime = timerSelect ? parseInt(timerSelect.value) : 60;
         
-        game.timeRemaining = CONFIG.MODES[mode].time;
+        // Override MODES time with user-selected duration for timed mode
+        game.timeRemaining = CONFIG.MODES[mode].hasTimer ? customTime : 0;
         game.text = await game.getText(category);
         
         document.getElementById('textDisplay').innerHTML = game.renderText();
@@ -560,6 +609,12 @@ const game = {
         inputBox.focus();
 
         game.startTime = Date.now();
+
+        // Sample WPM every 2 seconds for results chart
+        game.wpmHistoryTimer = setInterval(() => {
+            if (!game.isPlaying) { clearInterval(game.wpmHistoryTimer); return; }
+            game.wpmHistory.push(game.calculateWpm());
+        }, 2000);
 
         // Ghost Mode Init
         const data = stats.getData();
@@ -654,6 +709,14 @@ const game = {
             }
         }
 
+        // Track missed keys
+        const typedChar = val[val.length - 1];
+        const expectedChar = game.text[val.length - 1];
+        if (typedChar && expectedChar && typedChar !== expectedChar) {
+            const key = expectedChar.toLowerCase();
+            game.missedKeys[key] = (game.missedKeys[key] || 0) + 1;
+        }
+
         // Particles on success
         if (val[val.length - 1] === game.text[val.length - 1]) {
             const container = document.getElementById('displayContainer');
@@ -711,6 +774,7 @@ const game = {
 
     end: async (failed = false) => {
         clearInterval(game.timer);
+        clearInterval(game.wpmHistoryTimer);
         game.isPlaying = false;
         document.getElementById('inputBox').disabled = true;
         
@@ -719,16 +783,64 @@ const game = {
         } else {
             const wpm = game.calculateWpm();
             const acc = game.calculateAcc();
+            const xpGained = Math.round(wpm * (acc / 100) * 10);
             await stats.addMatch(wpm, acc);
-            ui.showNotification(`Great job! ${wpm} WPM attained.`);
-            
-            // CONFETTI!
-            confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#8b5cf6', '#2dd4bf', '#10b981']
-            });
+
+            // Confetti
+            if (typeof confetti !== 'undefined') {
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#8b5cf6', '#2dd4bf', '#10b981'] });
+            }
+
+            // Show results modal
+            const modal = document.getElementById('resultsModal');
+            if (modal) {
+                document.getElementById('resWpm').textContent = wpm;
+                document.getElementById('resAcc').textContent = `${acc}%`;
+                document.getElementById('resXp').textContent = `+${xpGained}`;
+
+                const bestData = await stats.getData();
+                const isNewBest = wpm >= bestData.bestWpm;
+                document.getElementById('resultsSubtitle').textContent = isNewBest
+                    ? `🏆 New Personal Best! Amazing run, ${auth.getCurrentUser()}!`
+                    : `Keep pushing! Your best is ${bestData.bestWpm} WPM.`;
+
+                // WPM over time chart
+                const ctx = document.getElementById('resultsChart');
+                if (ctx) {
+                    if (window._resultsChart) window._resultsChart.destroy();
+                    const labels = game.wpmHistory.map((_, i) => `${(i + 1) * 2}s`);
+                    window._resultsChart = new Chart(ctx.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: 'WPM',
+                                data: game.wpmHistory,
+                                borderColor: '#8b5cf6',
+                                tension: 0.4,
+                                fill: true,
+                                backgroundColor: 'rgba(139,92,246,0.15)',
+                                pointRadius: 3
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+
+                // Missed keys heatmap
+                ui.renderHeatmap(game.missedKeys);
+
+                modal.style.display = 'flex';
+            } else {
+                ui.showNotification(`Great job! ${wpm} WPM attained.`);
+            }
         }
 
         document.getElementById('startBtn').style.display = 'block';
@@ -738,9 +850,12 @@ const game = {
 
     reset: () => {
         clearInterval(game.timer);
+        clearInterval(game.wpmHistoryTimer);
         game.isPlaying = false;
         game.typed = "";
         game.streak = 0;
+        game.missedKeys = {};
+        game.wpmHistory = [];
         document.getElementById('inputBox').value = "";
         document.getElementById('inputBox').disabled = true;
         document.getElementById('textDisplay').textContent = "Select a mode and click Start to begin...";

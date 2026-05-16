@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100),
     password VARCHAR(255) NOT NULL,
+    avatar VARCHAR(255) DEFAULT 'default-avatar.png',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -21,3 +22,7 @@ CREATE TABLE IF NOT EXISTS stats (
     history TEXT, -- Store history as a JSON string
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Migration: add avatar column if upgrading from older version
+-- Run this if you already have the users table created without avatar:
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(255) DEFAULT 'default-avatar.png';

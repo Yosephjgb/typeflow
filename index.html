@@ -23,6 +23,7 @@
         </div>
         <div class="nav-links" id="navLinks">
             <!-- Dynamic links based on auth state -->
+            <a href="leaderboard.html" class="btn-outline"><i class="fas fa-trophy"></i> Leaderboard</a>
             <a href="dashboard.html" class="btn-outline">Dashboard</a>
             <button onclick="ui.toggleSettings()" class="btn-outline" id="settingsBtn">
                 <i class="fas fa-cog"></i>
@@ -58,9 +59,15 @@
             <div class="game-settings" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
                 <div class="setting-group" style="display: flex; gap: 10px;">
                     <select id="modeSelect" class="btn-outline">
-                        <option value="normal">⏱ Timed (60s)</option>
+                        <option value="normal">⏱ Timed</option>
                         <option value="zen">🧘 Untimed (Relaxed)</option>
                         <option value="hardcore">🎯 Perfect (No Mistakes)</option>
+                    </select>
+                    <select id="timerSelect" class="btn-outline">
+                        <option value="15">15s</option>
+                        <option value="30">30s</option>
+                        <option value="60" selected>60s</option>
+                        <option value="120">120s</option>
                     </select>
                     <button id="soundToggle" class="btn-outline" title="Toggle Typing Sounds">
                         🔊 Sound: ON
@@ -240,7 +247,55 @@
         </div>
     </div>
 
+    <!-- RESULTS MODAL -->
+    <div id="resultsModal" class="modal-overlay" style="display: none;">
+        <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 40px; animation: slideUp 0.3s forwards; position: relative;">
+            <button onclick="document.getElementById('resultsModal').style.display='none'" style="position:absolute;top:15px;right:20px;background:none;border:none;color:var(--text-dim);font-size:1.5rem;cursor:pointer;">&times;</button>
+            <h2 style="text-align:center; font-size:2rem; margin-bottom:5px;">
+                <i class="fas fa-flag-checkered" style="color:var(--primary)"></i> Test Complete!
+            </h2>
+            <p id="resultsSubtitle" style="text-align:center; color:var(--text-dim); margin-bottom:30px;"></p>
+
+            <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:15px; margin-bottom:30px;">
+                <div class="glass-panel" style="padding:20px; text-align:center;">
+                    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">WPM</div>
+                    <div id="resWpm" style="font-size:2.5rem; font-weight:800; color:var(--primary); font-family:'Outfit',sans-serif;"></div>
+                </div>
+                <div class="glass-panel" style="padding:20px; text-align:center;">
+                    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Accuracy</div>
+                    <div id="resAcc" style="font-size:2.5rem; font-weight:800; color:var(--secondary); font-family:'Outfit',sans-serif;"></div>
+                </div>
+                <div class="glass-panel" style="padding:20px; text-align:center;">
+                    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">XP Earned</div>
+                    <div id="resXp" style="font-size:2.5rem; font-weight:800; color:var(--success); font-family:'Outfit',sans-serif;"></div>
+                </div>
+            </div>
+
+            <!-- WPM over time mini chart -->
+            <div style="height:150px; margin-bottom:25px;">
+                <canvas id="resultsChart"></canvas>
+            </div>
+
+            <!-- Missed keys heatmap -->
+            <div id="heatmapSection" style="margin-bottom:25px;">
+                <h3 style="font-size:1rem; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.1em;">
+                    <i class="fas fa-fire"></i> Missed Keys Heatmap
+                </h3>
+                <div id="heatmapKeyboard" style="transform:scale(0.75); transform-origin:left top; width:133%;"></div>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button class="btn-primary" onclick="document.getElementById('resultsModal').style.display='none'; game.reset(); document.getElementById('startBtn').click();">
+                    <i class="fas fa-redo"></i> Play Again
+                </button>
+                <button class="btn-outline" onclick="document.getElementById('resultsModal').style.display='none';">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=3"></script>
 </body>
 </html>
