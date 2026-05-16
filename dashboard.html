@@ -6,7 +6,22 @@
     <title>Dashboard | TypeFlow</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stat-card {
+            background: var(--surface-color); border: 1px solid var(--surface-border);
+            border-radius: 16px; padding: 20px 24px; display: flex; align-items: center; gap: 16px;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { border-color: var(--primary); box-shadow: 0 0 20px var(--primary-glow); }
+        .stat-card-icon { font-size: 1.8rem; width: 50px; text-align: center; }
+        .stat-card-value { font-size: 1.8rem; font-weight: 800; font-family: 'Outfit', sans-serif; }
+        .stat-card-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+        #achievementsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+        .tab-btn { padding: 8px 18px; border-radius: 10px; border: 1px solid var(--surface-border); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.2s; font-size: 0.85rem; }
+        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+    </style>
 </head>
 <body>
 
@@ -14,40 +29,33 @@
         <div class="logo">
             <i class="fas fa-bolt"></i>
             <span>TypeFlow</span>
-            <span id="userLabel" style="font-size: 0.9rem; color: var(--text-dim); margin-left: 15px;">
+            <span id="userLabel" style="font-size:0.9rem; color:var(--text-dim); margin-left:15px;">
                 <i class="fas fa-user-circle"></i> <span id="userNameSpan">Player: Guest</span>
             </span>
         </div>
         <div class="nav-links">
             <a href="index.html" class="btn-outline"><i class="fas fa-keyboard"></i> Training</a>
-            <a href="login.html" class="btn-outline" id="loginBtn" style="display: none;">Login</a>
-            <a href="login.html?mode=register" class="btn-primary" id="signupBtn" style="display: none;">Create Account</a>
-            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display: none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <a href="leaderboard.html" class="btn-outline"><i class="fas fa-trophy"></i> Leaderboard</a>
+            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </nav>
 
-    <main class="main-container" style="max-width: 1200px;">
-        
+    <main class="main-container" style="max-width:1200px;">
+
         <div class="dashboard-grid">
-            
-            <!-- PROFILE & XP -->
+
+            <!-- LEFT: Profile -->
             <div class="profile-card glass-panel">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <div style="width: 100px; height: 100px; background: var(--primary-glow); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--primary);">
+                <div style="text-align:center; margin-bottom:25px;">
+                    <div style="width:90px; height:90px; background:var(--primary-glow); border-radius:50%; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; font-size:2.5rem; color:var(--primary); border:3px solid var(--primary);">
                         <i class="fas fa-user-astronaut"></i>
                     </div>
-                    <h2 id="userName" style="font-size: 2rem; margin-bottom: 5px;">Player</h2>
+                    <h2 id="userName" style="font-size:1.8rem; margin-bottom:6px;">Player</h2>
                     <span class="level-badge" id="userLevel">Level 1</span>
                 </div>
 
-                <div id="guestNotice" style="display: none; background: rgba(139, 92, 246, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px dashed var(--primary);">
-                    <p style="font-size: 0.8rem; color: var(--text-dim);">
-                        <i class="fas fa-info-circle"></i> Playing as <strong>Guest</strong>. Your data is only saved in this browser. <a href="login.html" style="color: var(--primary);">Sign up</a> to sync.
-                    </p>
-                </div>
-
-                <div class="xp-section">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-dim);">
+                <div class="xp-section" style="margin-bottom:25px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-dim);">
                         <span>XP Progress</span>
                         <span id="xpText">0 / 1000</span>
                     </div>
@@ -56,47 +64,129 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 40px;">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 20px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;">Personal Bests</h3>
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--text-dim);"><i class="fas fa-tachometer-alt"></i> Max WPM</span>
-                            <span style="font-weight: 800; font-size: 1.25rem; color: var(--primary);" id="bestWpm">0</span>
+                <!-- Quick Stats -->
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:25px;">
+                    <div class="stat-card">
+                        <div class="stat-card-icon">⚡</div>
+                        <div>
+                            <div class="stat-card-value" id="bestWpm" style="color:var(--primary);">0</div>
+                            <div class="stat-card-label">Best WPM</div>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--text-dim);"><i class="fas fa-crosshairs"></i> Accuracy</span>
-                            <span style="font-weight: 800; font-size: 1.25rem; color: var(--secondary);" id="bestAcc">0%</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon">🎯</div>
+                        <div>
+                            <div class="stat-card-value" id="bestAcc" style="color:var(--secondary);">0%</div>
+                            <div class="stat-card-label">Best Accuracy</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon">📊</div>
+                        <div>
+                            <div class="stat-card-value" id="avgWpm" style="color:#f59e0b;">0</div>
+                            <div class="stat-card-label">Avg WPM</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon">🔥</div>
+                        <div>
+                            <div class="stat-card-value" id="totalTests" style="color:var(--success);">0</div>
+                            <div class="stat-card-label">Total Tests</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon">💫</div>
+                        <div>
+                            <div class="stat-card-value" id="avgConsistency" style="color:#a78bfa;">0%</div>
+                            <div class="stat-card-label">Avg Consistency</div>
                         </div>
                     </div>
                 </div>
+
+                <a href="index.html" class="btn-primary" style="width:100%; justify-content:center;">
+                    <i class="fas fa-play"></i> Start Training
+                </a>
             </div>
 
-            <!-- ANALYTICS -->
+            <!-- RIGHT: Analytics Tabs -->
             <div class="analytics-card glass-panel">
-                <h3 style="font-size: 1.5rem; margin-bottom: 30px;"><i class="fas fa-chart-line"></i> Performance History</h3>
-                <div style="height: 350px; width: 100%;">
-                    <canvas id="performanceChart"></canvas>
+
+                <!-- Tabs -->
+                <div style="display:flex; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
+                    <button class="tab-btn active" onclick="switchTab('history')"><i class="fas fa-chart-line"></i> History</button>
+                    <button class="tab-btn" onclick="switchTab('activity')"><i class="fas fa-list"></i> Activity</button>
+                    <button class="tab-btn" onclick="switchTab('achievements')"><i class="fas fa-trophy"></i> Achievements</button>
                 </div>
 
-                <div style="margin-top: 40px;">
-                    <h3 style="font-size: 1.2rem; margin-bottom: 20px;">Recent Activity</h3>
-                    <div id="activityLog" style="display: flex; flex-direction: column; gap: 10px;">
-                        <!-- Activities will be injected here -->
-                        <p style="color: var(--text-dim); font-style: italic;">No recent activity found. Start training to see your stats!</p>
+                <!-- History Tab -->
+                <div id="tab-history" class="tab-panel active">
+                    <h3 style="font-size:1.2rem; margin-bottom:20px;"><i class="fas fa-chart-line"></i> Performance Over Time</h3>
+                    <div style="height:300px; width:100%; margin-bottom:30px;">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div style="background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); border-radius:12px; padding:16px; text-align:center;">
+                            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">Avg Accuracy</div>
+                            <div id="avgAcc" style="font-size:1.8rem; font-weight:800; color:var(--secondary);">0%</div>
+                        </div>
+                        <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:12px; padding:16px; text-align:center;">
+                            <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">Avg Consistency</div>
+                            <div id="avgConsistency2" style="font-size:1.8rem; font-weight:800; color:#f59e0b;">0%</div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Activity Tab -->
+                <div id="tab-activity" class="tab-panel">
+                    <h3 style="font-size:1.2rem; margin-bottom:20px;"><i class="fas fa-list"></i> Recent Sessions</h3>
+                    <div id="activityLog" style="display:flex; flex-direction:column; gap:6px;">
+                        <p style="color:var(--text-dim); font-style:italic;">No activity yet. Start training!</p>
+                    </div>
+                </div>
+
+                <!-- Achievements Tab -->
+                <div id="tab-achievements" class="tab-panel">
+                    <h3 style="font-size:1.2rem; margin-bottom:20px;"><i class="fas fa-trophy"></i> Your Achievements</h3>
+                    <div id="achievementsGrid"></div>
+                </div>
+
             </div>
-
         </div>
-
     </main>
 
     <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Dashboard specific initialization
+        function switchTab(name) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+            if (name === 'achievements') achievements.renderPanel();
+        }
+
         window.addEventListener('DOMContentLoaded', async () => {
-            // Allow guests to view dashboard
+            await auth.checkSession();
+            const user = auth.getCurrentUser();
+
+            if (user === 'guest') {
+                window.location.href = 'login.html?redirect=dashboard';
+                return;
+            }
+
+            themes.init();
+
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.style.display = 'block';
+            const userNameSpan = document.getElementById('userNameSpan');
+            if (userNameSpan) userNameSpan.textContent = `Player: ${user}`;
+
             await stats.initDashboard();
+
+            // Sync the second avgConsistency element
+            const ac2 = document.getElementById('avgConsistency2');
+            const ac1 = document.getElementById('avgConsistency');
+            if (ac2 && ac1) ac2.textContent = ac1.textContent;
         });
     </script>
 </body>

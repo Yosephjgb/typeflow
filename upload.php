@@ -11,6 +11,12 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
+// Ensure uploads directory exists and is writable
+$uploadDir = 'uploads/';
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
+}
+
 if (isset($_FILES['avatar'])) {
     $file = $_FILES['avatar'];
     $fileName = $file['name'];
@@ -33,10 +39,13 @@ if (isset($_FILES['avatar'])) {
                     // Update database
                     $stmt = $pdo->prepare("UPDATE users SET avatar = ? WHERE id = ?");
                     $stmt->execute([$fileNameNew, $user_id]);
+
+                    // ✅ Update session so avatar persists immediately without re-login
+                    $_SESSION['avatar'] = $fileNameNew;
                     
                     echo json_encode(['success' => true, 'avatar' => $fileNameNew]);
                 } else {
-                    echo json_encode(['success' => false, 'message' => 'Error moving file']);
+                    echo json_encode(['success' => false, 'message' => 'Error moving file. Check that the uploads/ folder exists and is writable.']);
                 }
             } else {
                 echo json_encode(['success' => false, 'message' => 'File too large (max 2MB)']);

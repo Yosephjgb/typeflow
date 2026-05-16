@@ -11,83 +11,181 @@
 
     <div class="auth-card glass-panel">
         <div style="text-align: center; margin-bottom: 30px;">
-            <div class="logo" style="justify-content: center; font-size: 2rem; margin-bottom: 10px;">
+            <a href="index.html" class="logo" style="justify-content: center; font-size: 2rem; margin-bottom: 10px; text-decoration:none;">
                 <i class="fas fa-bolt"></i>
                 <span>TypeFlow</span>
-            </div>
-            <p style="color: var(--text-dim);" id="authSubtitle">Login to track your progress</p>
+            </a>
+            <p style="color: var(--text-dim); margin-top:8px;" id="authSubtitle">Login to track your progress</p>
         </div>
 
         <!-- LOGIN FORM -->
         <div id="loginForm">
             <div class="input-group">
-                <label for="logUser">Username</label>
+                <label for="logUser"><i class="fas fa-user"></i> Username</label>
                 <input type="text" id="logUser" placeholder="Enter your username">
             </div>
             <div class="input-group">
-                <label for="logPass">Password</label>
+                <label for="logPass"><i class="fas fa-lock"></i> Password</label>
                 <input type="password" id="logPass" placeholder="••••••••">
             </div>
             <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="auth.login()">
                 Sign In <i class="fas fa-arrow-right"></i>
             </button>
+            <div style="text-align:center; margin-top: 12px;">
+                <a href="#" onclick="showPanel('forgotForm')" style="color:var(--text-dim); font-size:0.85rem; text-decoration:none;">
+                    <i class="fas fa-key"></i> Forgot your password?
+                </a>
+            </div>
             <div class="auth-footer">
-                Don't have an account? <a href="#" onclick="toggleAuth()">Create one</a>
+                Don't have an account? <a href="#" onclick="showPanel('regForm')">Create one</a>
             </div>
         </div>
 
-        <!-- REGISTER FORM (Hidden by default) -->
+        <!-- REGISTER FORM -->
         <div id="regForm" style="display: none;">
             <div class="input-group">
-                <label for="regUser">New Username</label>
+                <label for="regUser"><i class="fas fa-user"></i> New Username</label>
                 <input type="text" id="regUser" placeholder="Choose a username">
             </div>
             <div class="input-group">
-                <label for="regPass">Password</label>
+                <label for="regPass"><i class="fas fa-lock"></i> Password</label>
                 <input type="password" id="regPass" placeholder="••••••••">
             </div>
             <div class="input-group">
-                <label for="regConfirm">Confirm Password</label>
+                <label for="regConfirm"><i class="fas fa-lock"></i> Confirm Password</label>
                 <input type="password" id="regConfirm" placeholder="••••••••">
             </div>
             <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="auth.register()">
                 Create Account <i class="fas fa-user-plus"></i>
             </button>
             <div class="auth-footer">
-                Already have an account? <a href="#" onclick="toggleAuth()">Sign in</a>
+                Already have an account? <a href="#" onclick="showPanel('loginForm')">Sign in</a>
             </div>
         </div>
 
-        <div id="authError" style="margin-top: 20px; color: var(--error); font-size: 0.85rem; text-align: center; min-height: 20px;"></div>
+        <!-- FORGOT PASSWORD FORM -->
+        <div id="forgotForm" style="display: none;">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:60px; height:60px; background:var(--primary-glow); border-radius:50%; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:var(--primary);">
+                    <i class="fas fa-key"></i>
+                </div>
+                <p style="color:var(--text-dim); font-size:0.9rem;">Enter your username and choose a new password.</p>
+            </div>
+
+            <div class="input-group">
+                <label for="forgotUser"><i class="fas fa-user"></i> Username</label>
+                <input type="text" id="forgotUser" placeholder="Enter your username">
+            </div>
+            <div class="input-group">
+                <label for="forgotPass"><i class="fas fa-lock"></i> New Password</label>
+                <input type="password" id="forgotPass" placeholder="••••••••">
+            </div>
+            <div class="input-group">
+                <label for="forgotConfirm"><i class="fas fa-lock"></i> Confirm New Password</label>
+                <input type="password" id="forgotConfirm" placeholder="••••••••">
+            </div>
+
+            <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="doForgotPassword()">
+                Reset Password <i class="fas fa-shield-alt"></i>
+            </button>
+
+            <div class="auth-footer">
+                Remembered it? <a href="#" onclick="showPanel('loginForm')">Back to Login</a>
+            </div>
+        </div>
+
+        <div id="authError" style="margin-top: 15px; color: var(--error); font-size: 0.85rem; text-align: center; min-height: 20px;"></div>
+        <div id="authSuccess" style="margin-top: 5px; color: var(--success); font-size: 0.85rem; text-align: center; min-height: 20px;"></div>
     </div>
 
     <script src="script.js"></script>
     <script>
+        const panels = ['loginForm', 'regForm', 'forgotForm'];
+        const subtitles = {
+            loginForm: 'Login to track your progress',
+            regForm: 'Create your free account',
+            forgotForm: 'Reset your password'
+        };
+
+        function showPanel(id) {
+            panels.forEach(p => document.getElementById(p).style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+            document.getElementById('authSubtitle').textContent = subtitles[id];
+            document.getElementById('authError').textContent = '';
+            document.getElementById('authSuccess').textContent = '';
+        }
+
+        // Keep old toggleAuth working for any existing calls
         function toggleAuth() {
             const login = document.getElementById('loginForm');
-            const reg = document.getElementById('regForm');
-            const sub = document.getElementById('authSubtitle');
+            showPanel(login.style.display === 'none' ? 'loginForm' : 'regForm');
+        }
+
+        async function doForgotPassword() {
+            const username = document.getElementById('forgotUser').value.trim().toLowerCase();
+            const newPassword = document.getElementById('forgotPass').value.trim();
+            const confirmPassword = document.getElementById('forgotConfirm').value.trim();
             const error = document.getElementById('authError');
-            
+            const success = document.getElementById('authSuccess');
+
             error.textContent = '';
-            
-            if (login.style.display === 'none') {
-                login.style.display = 'block';
-                reg.style.display = 'none';
-                sub.textContent = 'Login to track your progress';
-            } else {
-                login.style.display = 'none';
-                reg.style.display = 'block';
-                sub.textContent = 'Create your free account';
+            success.textContent = '';
+
+            if (!username || !newPassword || !confirmPassword) {
+                error.textContent = 'All fields are required.';
+                return;
+            }
+            if (newPassword.length < 6) {
+                error.textContent = 'Password must be at least 6 characters.';
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                error.textContent = 'Passwords do not match.';
+                return;
+            }
+
+            try {
+                const res = await fetch('auth.php?action=forgot_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, newPassword, confirmPassword })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    success.textContent = '✅ Password reset! You can now log in.';
+                    document.getElementById('forgotUser').value = '';
+                    document.getElementById('forgotPass').value = '';
+                    document.getElementById('forgotConfirm').value = '';
+                    setTimeout(() => showPanel('loginForm'), 2000);
+                } else {
+                    error.textContent = result.message;
+                }
+            } catch (e) {
+                error.textContent = 'Server error. Please try again.';
             }
         }
 
         // Auto-switch based on URL
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'register') {
-                toggleAuth();
+            if (urlParams.get('mode') === 'register') showPanel('regForm');
+            if (urlParams.get('mode') === 'forgot') showPanel('forgotForm');
+
+            // If redirected from a protected page, show a hint
+            if (urlParams.get('redirect')) {
+                document.getElementById('authError').textContent = '⚠️ Please log in to access that page.';
             }
+        });
+
+        // Enter key support
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            const forgotVisible = document.getElementById('forgotForm').style.display !== 'none';
+            const regVisible = document.getElementById('regForm').style.display !== 'none';
+            if (forgotVisible) doForgotPassword();
+            else if (regVisible) auth.register();
+            else auth.login();
         });
     </script>
 </body>

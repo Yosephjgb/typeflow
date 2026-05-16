@@ -4,12 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TypeFlow | Ultimate Typing Speed Test</title>
-    <meta name="description" content="Test your typing speed with TypeFlow. Features glassmorphism UI, coding modes, and detailed analytics.">
     <link rel="stylesheet" href="style.css">
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Confetti for "WOW" factor -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ---- Theme Switcher ---- */
+        .theme-switcher { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        .theme-btn {
+            width:28px; height:28px; border-radius:50%; border:2px solid transparent;
+            cursor:pointer; transition:all 0.2s; position:relative;
+        }
+        .theme-btn.active { border-color:white; transform:scale(1.2); box-shadow:0 0 10px rgba(255,255,255,0.4); }
+        .theme-btn:hover { transform:scale(1.15); }
+
+        /* ---- Sound Controls ---- */
+        .sound-controls { display:flex; align-items:center; gap:8px; }
+        .sound-controls input[type=range] {
+            width:70px; accent-color:var(--primary); cursor:pointer;
+        }
+
+        /* ---- Achievements panel in modal ---- */
+        #achievementsGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:12px; }
+
+        /* ---- Consistency stat ---- */
+        .stat-value.consistency { color:#f59e0b; text-shadow:0 0 15px rgba(245,158,11,0.4); }
+
+        /* ---- Particle animation ---- */
+        @keyframes particleFly {
+            0%   { transform:translate(0,0) scale(1); opacity:1; }
+            100% { transform:translate(var(--dx,20px), var(--dy,-30px)) scale(0); opacity:0; }
+        }
+        @keyframes slideInRight {
+            from { transform:translateX(120%); opacity:0; }
+            to   { transform:translateX(0);    opacity:1; }
+        }
+
+        /* ---- Word count select ---- */
+        #wordSelect { display:none; }
+
+        /* ---- Active theme btn ---- */
+        .theme-btn[data-theme="default"]     { background:linear-gradient(135deg,#8b5cf6,#2dd4bf); }
+        .theme-btn[data-theme="ocean"]       { background:linear-gradient(135deg,#38bdf8,#06b6d4); }
+        .theme-btn[data-theme="forest"]      { background:linear-gradient(135deg,#4ade80,#a3e635); }
+        .theme-btn[data-theme="sunset"]      { background:linear-gradient(135deg,#fb923c,#f472b6); }
+        .theme-btn[data-theme="monochrome"]  { background:linear-gradient(135deg,#fff,#888); }
+        .theme-btn[data-theme="neon"]        { background:linear-gradient(135deg,#ff00ff,#00ffff); }
+
+        /* ---- Sound profile pill ---- */
+        .profile-pill {
+            padding:4px 10px; border-radius:20px; font-size:0.75rem; cursor:pointer;
+            border:1px solid var(--surface-border); background:rgba(255,255,255,0.04);
+            color:var(--text-dim); transition:all 0.2s;
+        }
+        .profile-pill.active {
+            background:var(--primary); color:white; border-color:var(--primary);
+        }
+
+        /* Scrollbar for modals */
+        .modal-scroll { max-height:85vh; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--primary) transparent; }
+        .modal-scroll::-webkit-scrollbar { width:5px; }
+        .modal-scroll::-webkit-scrollbar-thumb { background:var(--primary); border-radius:10px; }
+    </style>
 </head>
 <body>
 
@@ -17,26 +73,23 @@
         <div class="logo">
             <i class="fas fa-bolt"></i>
             <span>TypeFlow</span>
-            <span id="userLabel" style="font-size: 0.9rem; color: var(--text-dim); margin-left: 15px;">
+            <span id="userLabel" style="font-size:0.9rem; color:var(--text-dim); margin-left:15px;">
                 <i class="fas fa-user-circle"></i> <span id="userNameSpan">Player: Guest</span>
             </span>
         </div>
         <div class="nav-links" id="navLinks">
-            <!-- Dynamic links based on auth state -->
             <a href="leaderboard.html" class="btn-outline"><i class="fas fa-trophy"></i> Leaderboard</a>
-            <a href="dashboard.html" class="btn-outline">Dashboard</a>
-            <button onclick="ui.toggleSettings()" class="btn-outline" id="settingsBtn">
-                <i class="fas fa-cog"></i>
-            </button>
-            <a href="login.html" class="btn-outline" id="loginBtn" style="display: none;">Login</a>
-            <a href="login.html?mode=register" class="btn-primary" id="signupBtn" style="display: none;">Create Account</a>
-            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display: none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <a href="dashboard.html" class="btn-outline" id="dashboardBtn" style="display:none;"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <button onclick="ui.toggleSettings()" class="btn-outline" id="settingsBtn" style="display:none;"><i class="fas fa-cog"></i></button>
+            <a href="login.html" class="btn-outline" id="loginBtn">Login</a>
+            <a href="login.html?mode=register" class="btn-primary" id="signupBtn">Create Account</a>
+            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </nav>
 
     <main class="main-container">
-        
-        <!-- HEADER STATS -->
+
+        <!-- STATS GRID -->
         <div class="stats-grid">
             <div class="stat-item glass-panel">
                 <div class="stat-label">Words Per Minute</div>
@@ -46,22 +99,26 @@
                 <div class="stat-label">Accuracy</div>
                 <div class="stat-value secondary" id="accuracy">0%</div>
             </div>
-
             <div class="stat-item glass-panel">
                 <div class="stat-label">Time Remaining</div>
                 <div class="stat-value" id="timer">60s</div>
+            </div>
+            <div class="stat-item glass-panel">
+                <div class="stat-label">Streak</div>
+                <div class="stat-value consistency" id="streak">0</div>
             </div>
         </div>
 
         <!-- GAME ARENA -->
         <div class="game-card glass-panel" id="gameArena">
-            
-            <div class="game-settings" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <div class="setting-group" style="display: flex; gap: 10px;">
+
+            <div class="game-settings" style="display:flex; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                     <select id="modeSelect" class="btn-outline">
                         <option value="normal">⏱ Timed</option>
-                        <option value="zen">🧘 Untimed (Relaxed)</option>
-                        <option value="hardcore">🎯 Perfect (No Mistakes)</option>
+                        <option value="zen">🧘 Zen (Untimed)</option>
+                        <option value="hardcore">🎯 Hardcore</option>
+                        <option value="words">📝 Word Count</option>
                     </select>
                     <select id="timerSelect" class="btn-outline">
                         <option value="15">15s</option>
@@ -69,106 +126,124 @@
                         <option value="60" selected>60s</option>
                         <option value="120">120s</option>
                     </select>
-                    <button id="soundToggle" class="btn-outline" title="Toggle Typing Sounds">
-                        🔊 Sound: ON
-                    </button>
+                    <select id="wordSelect" class="btn-outline">
+                        <option value="10">10 words</option>
+                        <option value="25" selected>25 words</option>
+                        <option value="50">50 words</option>
+                        <option value="100">100 words</option>
+                    </select>
                 </div>
-                <div id="modeDescription" class="glass-panel" style="position: absolute; top: 70px; left: 0; padding: 10px 20px; font-size: 0.85rem; display: none; z-index: 100; max-width: 300px; border-color: var(--primary);">
-                    <!-- Description will be injected here -->
-                </div>
-                <div class="setting-group">
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                     <select id="categorySelect" class="btn-outline">
                         <option value="general">📝 General</option>
-                        <option value="code">💻 Coding (JS)</option>
+                        <option value="code">💻 Code (JS)</option>
                         <option value="quotes">💬 Quotes</option>
                         <option value="wiki">🌐 Wikipedia</option>
                         <option value="advice">💡 Advice</option>
                         <option value="facts">🧠 Facts</option>
                     </select>
+                    <!-- Theme Switcher -->
+                    <div class="theme-switcher" title="Switch Theme">
+                        <button class="theme-btn" data-theme="default"    onclick="themes.apply('default')"    title="Default"></button>
+                        <button class="theme-btn" data-theme="ocean"      onclick="themes.apply('ocean')"      title="Ocean"></button>
+                        <button class="theme-btn" data-theme="forest"     onclick="themes.apply('forest')"     title="Forest"></button>
+                        <button class="theme-btn" data-theme="sunset"     onclick="themes.apply('sunset')"     title="Sunset"></button>
+                        <button class="theme-btn" data-theme="monochrome" onclick="themes.apply('monochrome')" title="Monochrome"></button>
+                        <button class="theme-btn" data-theme="neon"       onclick="themes.apply('neon')"       title="Neon"></button>
+                    </div>
                 </div>
             </div>
 
+            <div id="modeDescription" class="glass-panel" style="position:absolute;top:70px;left:0;padding:10px 20px;font-size:0.85rem;display:none;z-index:100;max-width:300px;border-color:var(--primary);"></div>
+
             <div class="text-display-container" id="displayContainer">
-                <!-- Ghost Progress Bar (Personal Best) -->
-                <div id="ghostBar" style="position: absolute; top: 0; left: 0; height: 3px; background: rgba(255, 255, 255, 0.2); width: 0%; transition: width 0.3s ease; z-index: 5;"></div>
-                <div id="pbLabel" style="position: absolute; top: 5px; left: 10px; font-size: 0.7rem; color: var(--text-dim); opacity: 0;">YOUR BEST RUN</div>
-                
-                <!-- Particles will be appended here -->
+                <div id="ghostBar" style="position:absolute;top:0;left:0;height:3px;background:rgba(255,255,255,0.2);width:0%;transition:width 0.3s ease;z-index:5;"></div>
+                <div id="pbLabel" style="position:absolute;top:5px;left:10px;font-size:0.7rem;color:var(--text-dim);opacity:0;">YOUR BEST RUN</div>
                 <div id="textDisplay">Select a mode and click Start to begin...</div>
             </div>
 
-            <!-- Hidden Input for Focus -->
             <input type="text" id="inputBox" autocomplete="off" spellcheck="false">
 
-            <div class="game-controls">
-                <button class="btn-primary" id="startBtn">
-                    <i class="fas fa-play"></i> Start Training
-                </button>
-                <button class="btn-outline" id="restartBtn" style="display: none;">
-                    <i class="fas fa-redo"></i> Restart
-                </button>
+            <!-- Sound Controls -->
+            <div class="sound-controls" style="margin:15px 0 5px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <button id="soundToggleBtn" class="btn-outline" style="padding:6px 14px; font-size:0.8rem;" onclick="
+                    soundEngine.enabled = !soundEngine.enabled;
+                    localStorage.setItem('soundEnabled', soundEngine.enabled);
+                    this.innerHTML = soundEngine.enabled ? '🔊 Sound' : '🔇 Sound';
+                ">🔊 Sound</button>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:0.75rem; color:var(--text-dim);">Vol</span>
+                    <input type="range" min="0" max="1" step="0.1" value="0.5" id="volumeSlider" oninput="soundEngine.volume=parseFloat(this.value);localStorage.setItem('soundVolume',this.value);">
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button class="profile-pill active" data-profile="mechanical" onclick="setSoundProfile(this,'mechanical')">Mechanical</button>
+                    <button class="profile-pill" data-profile="soft" onclick="setSoundProfile(this,'soft')">Soft</button>
+                    <button class="profile-pill" data-profile="typewriter" onclick="setSoundProfile(this,'typewriter')">Typewriter</button>
+                </div>
             </div>
 
-            <div id="countdownOverlay" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 5rem; font-weight: 800; color: var(--primary); text-shadow: 0 0 30px var(--primary-glow);">3</div>
+            <div class="game-controls">
+                <button class="btn-primary" id="startBtn"><i class="fas fa-play"></i> Start Training</button>
+                <button class="btn-outline" id="restartBtn" style="display:none;"><i class="fas fa-redo"></i> Restart</button>
+                <button class="btn-outline" onclick="document.getElementById('achievementsModal').style.display='flex'" style="padding:10px 16px;" title="Achievements">🏆</button>
+            </div>
+
+            <div id="countdownOverlay" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5rem;font-weight:800;color:var(--primary);text-shadow:0 0 30px var(--primary-glow);">3</div>
         </div>
 
         <!-- VIRTUAL KEYBOARD -->
         <div class="keyboard" id="keyboard">
-            <!-- Row 1 -->
             <div class="keyboard-row">
                 <div class="key key-pinky" data-key="`">`</div>
                 <div class="key key-pinky" data-key="1">1</div>
-                <div class="key key-ring" data-key="2">2</div>
+                <div class="key key-ring"  data-key="2">2</div>
                 <div class="key key-middle" data-key="3">3</div>
                 <div class="key key-index" data-key="4">4</div>
                 <div class="key key-index" data-key="5">5</div>
                 <div class="key key-index" data-key="6">6</div>
                 <div class="key key-index" data-key="7">7</div>
                 <div class="key key-middle" data-key="8">8</div>
-                <div class="key key-ring" data-key="9">9</div>
+                <div class="key key-ring"  data-key="9">9</div>
                 <div class="key key-pinky" data-key="0">0</div>
                 <div class="key key-pinky" data-key="-">-</div>
                 <div class="key key-pinky" data-key="=">=</div>
                 <div class="key key-pinky wide" data-key="backspace">BS</div>
             </div>
-            <!-- Row 2 -->
             <div class="keyboard-row">
                 <div class="key key-pinky wide">Tab</div>
                 <div class="key key-pinky" data-key="q">Q</div>
-                <div class="key key-ring" data-key="w">W</div>
+                <div class="key key-ring"  data-key="w">W</div>
                 <div class="key key-middle" data-key="e">E</div>
                 <div class="key key-index" data-key="r">R</div>
                 <div class="key key-index" data-key="t">T</div>
                 <div class="key key-index" data-key="y">Y</div>
                 <div class="key key-index" data-key="u">U</div>
                 <div class="key key-middle" data-key="i">I</div>
-                <div class="key key-ring" data-key="o">O</div>
+                <div class="key key-ring"  data-key="o">O</div>
                 <div class="key key-pinky" data-key="p">P</div>
                 <div class="key key-pinky" data-key="[">[</div>
                 <div class="key key-pinky" data-key="]">]</div>
                 <div class="key key-pinky" data-key="\">\</div>
             </div>
-            <!-- Row 3 -->
             <div class="keyboard-row">
                 <div class="key key-pinky wide">Caps</div>
                 <div class="key key-pinky" data-key="a">A</div>
-                <div class="key key-ring" data-key="s">S</div>
+                <div class="key key-ring"  data-key="s">S</div>
                 <div class="key key-middle" data-key="d">D</div>
                 <div class="key key-index" data-key="f">F</div>
                 <div class="key key-index" data-key="g">G</div>
                 <div class="key key-index" data-key="h">H</div>
                 <div class="key key-index" data-key="j">J</div>
                 <div class="key key-middle" data-key="k">K</div>
-                <div class="key key-ring" data-key="l">L</div>
+                <div class="key key-ring"  data-key="l">L</div>
                 <div class="key key-pinky" data-key=";">;</div>
                 <div class="key key-pinky" data-key="'">'</div>
                 <div class="key key-pinky wide" data-key="enter">Enter</div>
             </div>
-            <!-- Row 4 -->
             <div class="keyboard-row">
                 <div class="key key-pinky wide">Shift</div>
                 <div class="key key-pinky" data-key="z">Z</div>
-                <div class="key key-ring" data-key="x">X</div>
+                <div class="key key-ring"  data-key="x">X</div>
                 <div class="key key-middle" data-key="c">C</div>
                 <div class="key key-index" data-key="v">V</div>
                 <div class="key key-index" data-key="b">B</div>
@@ -179,7 +254,6 @@
                 <div class="key key-pinky" data-key="/">/</div>
                 <div class="key key-pinky wide">Shift</div>
             </div>
-            <!-- Row 5 -->
             <div class="keyboard-row">
                 <div class="key key-pinky wide">Ctrl</div>
                 <div class="key key-pinky">Alt</div>
@@ -191,111 +265,137 @@
 
     </main>
 
-    <footer style="text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.9rem;">
+    <footer style="text-align:center; padding:40px; color:var(--text-dim); font-size:0.9rem;">
         &copy; 2026 TypeFlow Engine. All rights reserved.
     </footer>
 
-    <!-- SETTINGS MODAL -->
-    <div id="settingsModal" class="modal-overlay" style="display: none;">
-        <div class="settings-card glass-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <h2><i class="fas fa-sliders-h"></i> User Settings</h2>
-                <button onclick="ui.toggleSettings()" class="btn-outline" style="padding: 5px 12px;">&times;</button>
+    <!-- ===== SETTINGS MODAL ===== -->
+    <div id="settingsModal" class="modal-overlay" style="display:none;">
+        <div class="settings-card glass-panel modal-scroll">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+                <h2><i class="fas fa-sliders-h"></i> Settings</h2>
+                <button onclick="ui.toggleSettings()" class="btn-outline" style="padding:5px 12px;">&times;</button>
             </div>
-
-            <div class="settings-content">
-                <!-- Profile Section -->
-                <div class="profile-upload" style="text-align: center; margin-bottom: 30px;">
-                    <div id="profilePreview" class="profile-img-lg">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <input type="file" id="profileInput" style="display: none;" accept="image/*" onchange="ui.handleProfileUpload(event)">
-                    <button onclick="document.getElementById('profileInput').click()" class="btn-outline" style="margin-top: 10px; font-size: 0.8rem;">Change Photo</button>
-                </div>
-
-                <!-- Account Settings -->
+            <div class="profile-upload" style="text-align:center; margin-bottom:25px;">
+                <div id="profilePreview" class="profile-img-lg"><i class="fas fa-user-circle"></i></div>
+                <input type="file" id="profileInput" style="display:none;" accept="image/*" onchange="ui.handleProfileUpload(event)">
+                <button onclick="document.getElementById('profileInput').click()" class="btn-outline" style="margin-top:10px; font-size:0.8rem;">Change Photo</button>
+            </div>
+            <div class="input-group">
+                <label>Display Name</label>
+                <input type="text" id="setUserName" placeholder="Username">
+            </div>
+            <hr style="border:0; border-top:1px solid var(--surface-border); margin:20px 0;">
+            <div style="background:rgba(239,68,68,0.05); padding:15px; border-radius:12px; border:1px solid rgba(239,68,68,0.2);">
+                <h3 style="font-size:0.9rem; margin-bottom:15px; color:var(--error);">Change Password</h3>
                 <div class="input-group">
-                    <label>Display Name</label>
-                    <input type="text" id="setUserName" placeholder="Username">
+                    <label>Current Password</label>
+                    <input type="password" id="confirmOldPass" placeholder="Enter current password">
                 </div>
                 <div class="input-group">
-                    <label>Country</label>
-                    <input type="text" id="setUserCountry" placeholder="e.g. USA, UK, etc.">
+                    <label>New Password</label>
+                    <input type="password" id="setNewPass" placeholder="Enter new password">
                 </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--surface-border); margin: 25px 0;">
-
-                <div class="security-section" style="background: rgba(239, 68, 68, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
-                    <h3 style="font-size: 0.9rem; margin-bottom: 15px; color: var(--error);">Security: Change Password</h3>
-                    <div class="input-group">
-                        <label>Confirm Old Password</label>
-                        <input type="password" id="confirmOldPass" placeholder="Enter current password">
-                    </div>
-                    <div class="input-group">
-                        <label>New Password</label>
-                        <input type="password" id="setNewPass" placeholder="Enter new password">
-                    </div>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 30px;">
-                    <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="auth.saveSettings()">Save Changes</button>
-                    <button class="btn-outline" style="width: 100%; color: var(--error);" id="modalLogout" onclick="auth.logout()">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:25px;">
+                <button class="btn-primary" style="width:100%; justify-content:center;" onclick="auth.saveSettings()">Save Changes</button>
+                <button class="btn-outline" style="width:100%; color:var(--error);" onclick="auth.logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </div>
     </div>
 
-    <!-- RESULTS MODAL -->
-    <div id="resultsModal" class="modal-overlay" style="display: none;">
-        <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 40px; animation: slideUp 0.3s forwards; position: relative;">
+    <!-- ===== ACHIEVEMENTS MODAL ===== -->
+    <div id="achievementsModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="glass-panel modal-scroll" style="width:100%; max-width:680px; padding:40px; animation:slideUp 0.3s forwards; position:relative;">
+            <button onclick="document.getElementById('achievementsModal').style.display='none'" style="position:absolute;top:15px;right:20px;background:none;border:none;color:var(--text-dim);font-size:1.5rem;cursor:pointer;">&times;</button>
+            <h2 style="text-align:center; margin-bottom:8px;">🏆 Achievements</h2>
+            <p style="text-align:center; color:var(--text-dim); margin-bottom:30px;">Complete challenges to unlock badges</p>
+            <div id="achievementsGrid"></div>
+        </div>
+    </div>
+
+    <!-- ===== RESULTS MODAL ===== -->
+    <div id="resultsModal" class="modal-overlay" style="display:none;">
+        <div class="glass-panel modal-scroll" style="width:100%; max-width:620px; padding:40px; animation:slideUp 0.3s forwards; position:relative;">
             <button onclick="document.getElementById('resultsModal').style.display='none'" style="position:absolute;top:15px;right:20px;background:none;border:none;color:var(--text-dim);font-size:1.5rem;cursor:pointer;">&times;</button>
             <h2 style="text-align:center; font-size:2rem; margin-bottom:5px;">
                 <i class="fas fa-flag-checkered" style="color:var(--primary)"></i> Test Complete!
             </h2>
-            <p id="resultsSubtitle" style="text-align:center; color:var(--text-dim); margin-bottom:30px;"></p>
+            <p id="resultsSubtitle" style="text-align:center; color:var(--text-dim); margin-bottom:25px;"></p>
 
-            <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:15px; margin-bottom:30px;">
-                <div class="glass-panel" style="padding:20px; text-align:center;">
-                    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">WPM</div>
-                    <div id="resWpm" style="font-size:2.5rem; font-weight:800; color:var(--primary); font-family:'Outfit',sans-serif;"></div>
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:25px;">
+                <div class="glass-panel" style="padding:16px; text-align:center;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">WPM</div>
+                    <div id="resWpm" style="font-size:2.2rem; font-weight:800; color:var(--primary); font-family:'Outfit',sans-serif;"></div>
                 </div>
-                <div class="glass-panel" style="padding:20px; text-align:center;">
-                    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Accuracy</div>
-                    <div id="resAcc" style="font-size:2.5rem; font-weight:800; color:var(--secondary); font-family:'Outfit',sans-serif;"></div>
+                <div class="glass-panel" style="padding:16px; text-align:center;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">Accuracy</div>
+                    <div id="resAcc" style="font-size:2.2rem; font-weight:800; color:var(--secondary); font-family:'Outfit',sans-serif;"></div>
                 </div>
-                <div class="glass-panel" style="padding:20px; text-align:center;">
-                    <div style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">XP Earned</div>
-                    <div id="resXp" style="font-size:2.5rem; font-weight:800; color:var(--success); font-family:'Outfit',sans-serif;"></div>
+                <div class="glass-panel" style="padding:16px; text-align:center;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">Consistency</div>
+                    <div id="resConsistency" style="font-size:2.2rem; font-weight:800; color:#f59e0b; font-family:'Outfit',sans-serif;"></div>
+                </div>
+                <div class="glass-panel" style="padding:16px; text-align:center;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">XP Earned</div>
+                    <div id="resXp" style="font-size:2.2rem; font-weight:800; color:var(--success); font-family:'Outfit',sans-serif;"></div>
                 </div>
             </div>
 
-            <!-- WPM over time mini chart -->
-            <div style="height:150px; margin-bottom:25px;">
+            <!-- WPM chart -->
+            <div style="height:140px; margin-bottom:20px;">
                 <canvas id="resultsChart"></canvas>
             </div>
 
             <!-- Missed keys heatmap -->
-            <div id="heatmapSection" style="margin-bottom:25px;">
-                <h3 style="font-size:1rem; color:var(--text-dim); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.1em;">
+            <div style="margin-bottom:20px;">
+                <h3 style="font-size:0.9rem; color:var(--text-dim); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.1em;">
                     <i class="fas fa-fire"></i> Missed Keys Heatmap
                 </h3>
-                <div id="heatmapKeyboard" style="transform:scale(0.75); transform-origin:left top; width:133%;"></div>
+                <div id="heatmapKeyboard" style="transform:scale(0.78); transform-origin:left top; width:128%;"></div>
             </div>
 
-            <div style="display:flex; gap:10px; justify-content:center;">
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
                 <button class="btn-primary" onclick="document.getElementById('resultsModal').style.display='none'; game.reset(); document.getElementById('startBtn').click();">
                     <i class="fas fa-redo"></i> Play Again
                 </button>
-                <button class="btn-outline" onclick="document.getElementById('resultsModal').style.display='none';">
-                    Close
-                </button>
+                <button class="btn-outline" onclick="document.getElementById('resultsModal').style.display='none';">Close</button>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="script.js?v=3"></script>
+    <script src="script.js"></script>
+    <script>
+        // Sound profile switcher
+        function setSoundProfile(btn, profile) {
+            soundEngine.profile = profile;
+            localStorage.setItem('soundProfile', profile);
+            document.querySelectorAll('.profile-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // Restore sound UI state
+        window.addEventListener('DOMContentLoaded', () => {
+            const vol = localStorage.getItem('soundVolume') || '0.5';
+            const slider = document.getElementById('volumeSlider');
+            if (slider) slider.value = vol;
+
+            const profile = localStorage.getItem('soundProfile') || 'mechanical';
+            document.querySelectorAll('.profile-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.profile === profile);
+            });
+            soundEngine.profile = profile;
+
+            const soundBtn = document.getElementById('soundToggleBtn');
+            if (soundBtn) soundBtn.innerHTML = soundEngine.enabled ? '🔊 Sound' : '🔇 Sound';
+
+            // Open achievements modal and render
+            document.getElementById('achievementsModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('achievementsModal')) {
+                    document.getElementById('achievementsModal').style.display = 'none';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
