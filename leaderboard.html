@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard | TypeFlow</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .lb-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .lb-table th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--surface-border);
+        }
+        .lb-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            vertical-align: middle;
+        }
+        .lb-table tr:last-child td { border-bottom: none; }
+        .lb-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .rank-1 { color: #fbbf24; font-size: 1.3rem; }
+        .rank-2 { color: #94a3b8; font-size: 1.2rem; }
+        .rank-3 { color: #b45309; font-size: 1.1rem; }
+        .rank-num { color: var(--text-dim); font-weight: 700; }
+        .avatar-sm {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--primary-glow);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; color: var(--primary);
+            overflow: hidden; border: 2px solid var(--surface-border);
+            vertical-align: middle; margin-right: 10px;
+        }
+        .avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+        .wpm-value { font-size: 1.3rem; font-weight: 800; color: var(--primary); font-family: 'Outfit', sans-serif; }
+        .acc-value { font-weight: 700; color: var(--secondary); }
+        .lb-empty { text-align:center; padding: 60px; color: var(--text-dim); }
+        .lb-skeleton { animation: pulse 1.5s ease-in-out infinite; background: rgba(255,255,255,0.05); border-radius: 8px; height: 20px; }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+        .my-row td { background: rgba(139,92,246,0.08) !important; }
+        .my-row td:first-child { border-left: 3px solid var(--primary); }
+        .filters { display:flex; gap:10px; align-items:center; margin-bottom:25px; flex-wrap:wrap; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-bolt"></i>
+            <span>TypeFlow</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="btn-outline"><i class="fas fa-keyboard"></i> Training</a>
+            <a href="dashboard.html" class="btn-outline"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="login.html" class="btn-outline" id="loginBtn" style="display:none;">Login</a>
+            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+    </nav>
+
+    <main class="main-container" style="max-width:900px;">
+
+        <div style="text-align:center; margin-bottom:40px;">
+            <h1 style="font-size:3rem; margin-bottom:10px;">
+                <i class="fas fa-trophy" style="color:#fbbf24;"></i> Leaderboard
+            </h1>
+            <p style="color:var(--text-dim);">Top typists ranked by personal best WPM</p>
+        </div>
+
+        <!-- Top 3 Podium -->
+        <div id="podium" style="display:grid; grid-template-columns:1fr 1.2fr 1fr; gap:15px; margin-bottom:40px; align-items:end;">
+            <!-- Injected by JS -->
+        </div>
+
+        <!-- Full table -->
+        <div class="glass-panel" style="padding:30px;">
+            <div class="filters">
+                <h3 style="margin:0; flex:1;"><i class="fas fa-list-ol"></i> Full Rankings</h3>
+                <select id="limitSelect" class="btn-outline" onchange="loadLeaderboard()">
+                    <option value="10">Top 10</option>
+                    <option value="20" selected>Top 20</option>
+                    <option value="50">Top 50</option>
+                </select>
+                <button class="btn-outline" onclick="loadLeaderboard()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+
+            <div id="lbBody">
+                <!-- Skeleton loaders -->
+                <div style="display:flex; flex-direction:column; gap:12px; padding:10px 0;">
+                    ${[1,2,3,4,5].map(() => `<div class="lb-skeleton" style="height:48px;"></div>`).join('')}
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+    <script>
+        let currentUsername = null;
+
+        async function loadLeaderboard() {
+            const limit = document.getElementById('limitSelect').value;
+            const lbBody = document.getElementById('lbBody');
+
+            lbBody.innerHTML = `<div style="display:flex;flex-direction:column;gap:12px;padding:10px 0;">
+                ${[1,2,3,4,5].map(() => `<div class="lb-skeleton" style="height:48px; border-radius:8px;"></div>`).join('')}
+            </div>`;
+
+            try {
+                const res = await fetch(`leaderboard.php?limit=${limit}`);
+                const result = await res.json();
+
+                if (!result.success || !result.data.length) {
+                    lbBody.innerHTML = `<div class="lb-empty"><i class="fas fa-ghost" style="font-size:3rem; margin-bottom:15px; display:block;"></i>No scores yet. Be the first!</div>`;
+                    document.getElementById('podium').innerHTML = '';
+                    return;
+                }
+
+                renderPodium(result.data.slice(0, 3));
+                renderTable(result.data);
+            } catch (e) {
+                lbBody.innerHTML = `<div class="lb-empty" style="color:var(--error);"><i class="fas fa-exclamation-triangle"></i> Failed to load. Make sure leaderboard.php is accessible.</div>`;
+            }
+        }
+
+        function avatarHtml(row) {
+            if (row.avatar && row.avatar !== 'default-avatar.png') {
+                return `<div class="avatar-sm"><img src="uploads/${row.avatar}"></div>`;
+            }
+            return `<div class="avatar-sm"><i class="fas fa-user-astronaut"></i></div>`;
+        }
+
+        function rankIcon(i) {
+            if (i === 0) return `<i class="fas fa-crown rank-1"></i>`;
+            if (i === 1) return `<span class="rank-2">🥈</span>`;
+            if (i === 2) return `<span class="rank-3">🥉</span>`;
+            return `<span class="rank-num">#${i + 1}</span>`;
+        }
+
+        function renderPodium(top) {
+            const podium = document.getElementById('podium');
+            const heights = ['180px', '220px', '160px'];
+            const order = [1, 0, 2]; // 2nd, 1st, 3rd visual order
+            const labels = ['2nd', '1st', '3rd'];
+            const medalColors = ['#94a3b8', '#fbbf24', '#b45309'];
+
+            podium.innerHTML = order.map((dataIdx, visualIdx) => {
+                const row = top[dataIdx];
+                if (!row) return '<div></div>';
+                const isMe = row.username === currentUsername;
+                return `
+                <div class="glass-panel" style="padding:20px; text-align:center; height:${heights[visualIdx]}; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px; ${isMe ? 'border-color:var(--primary);' : ''}">
+                    <div style="font-size:2rem;">${dataIdx===0?'👑':dataIdx===1?'🥈':'🥉'}</div>
+                    <div style="font-size:2rem; color:var(--primary);"><i class="fas fa-user-astronaut"></i></div>
+                    <div style="font-weight:700; font-size:0.95rem;">${row.username}${isMe?' (You)':''}</div>
+                    <div style="font-size:1.8rem; font-weight:800; color:${medalColors[visualIdx]}; font-family:'Outfit',sans-serif;">${row.best_wpm} <span style="font-size:0.8rem; color:var(--text-dim);">WPM</span></div>
+                    <div style="font-size:0.8rem; color:var(--secondary);">${row.best_acc}% acc</div>
+                    <div style="font-size:0.7rem; color:var(--text-dim);">Lvl ${row.level}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderTable(data) {
+            const lbBody = document.getElementById('lbBody');
+            lbBody.innerHTML = `
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Best WPM</th>
+                            <th>Accuracy</th>
+                            <th>Level</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map((row, i) => {
+                            const isMe = row.username === currentUsername;
+                            return `<tr class="${isMe ? 'my-row' : ''}">
+                                <td>${rankIcon(i)}</td>
+                                <td>${avatarHtml(row)}<span style="font-weight:600;">${row.username}${isMe ? ' <span style="color:var(--primary);font-size:0.75rem;">(You)</span>' : ''}</span></td>
+                                <td><span class="wpm-value">${row.best_wpm}</span></td>
+                                <td><span class="acc-value">${row.best_acc}%</span></td>
+                                <td><span class="level-badge">Lvl ${row.level}</span></td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await auth.checkSession();
+            currentUsername = auth.getCurrentUser();
+
+            // Update nav
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (currentUsername !== 'guest') {
+                if (loginBtn) loginBtn.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'block';
+            } else {
+                if (loginBtn) loginBtn.style.display = 'block';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+
+            await loadLeaderboard();
+        });
+    </script>
+</body>
+</html>

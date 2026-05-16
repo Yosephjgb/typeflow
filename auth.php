@@ -58,6 +58,44 @@ elseif ($action === 'login') {
     }
 }
 
+elseif ($action === 'forgot_password') {
+    $user = $data['username'] ?? '';
+    $newPass = $data['newPassword'] ?? '';
+    $confirmPass = $data['confirmPassword'] ?? '';
+
+    if (!$user || !$newPass || !$confirmPass) {
+        echo json_encode(['success' => false, 'message' => 'All fields are required']);
+        exit;
+    }
+
+    if (strlen($newPass) < 6) {
+        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters']);
+        exit;
+    }
+
+    if ($newPass !== $confirmPass) {
+        echo json_encode(['success' => false, 'message' => 'Passwords do not match']);
+        exit;
+    }
+
+    // Check user exists
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+    $stmt->execute([$user]);
+    $found = $stmt->fetch();
+
+    if (!$found) {
+        echo json_encode(['success' => false, 'message' => 'Username not found']);
+        exit;
+    }
+
+    // Reset password
+    $hashed = password_hash($newPass, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE username = ?");
+    $stmt->execute([$hashed, $user]);
+
+    echo json_encode(['success' => true, 'message' => 'Password reset successfully!']);
+}
+
 elseif ($action === 'logout') {
     session_destroy();
     echo json_encode(['success' => true]);
@@ -95,10 +133,19 @@ elseif ($action === 'update_profile') {
 
 elseif ($action === 'check') {
     if (isset($_SESSION['username'])) {
+        // Always re-fetch avatar from DB so it reflects any changes made
+        $stmt = $pdo->prepare("SELECT avatar FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $row = $stmt->fetch();
+        $avatar = $row['avatar'] ?? 'default-avatar.png';
+
+        // Keep session in sync
+        $_SESSION['avatar'] = $avatar;
+
         echo json_encode([
-            'loggedIn' => true, 
+            'loggedIn' => true,
             'username' => $_SESSION['username'],
-            'avatar' => $_SESSION['avatar'] ?? 'default-avatar.png'
+            'avatar'   => $avatar
         ]);
     } else {
         echo json_encode(['loggedIn' => false]);
