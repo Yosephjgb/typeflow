@@ -17,7 +17,6 @@
             </a>
             <p style="color: var(--text-dim); margin-top: 10px;">Create your free account</p>
         </div>
-
         <div class="input-group">
             <label for="regUser"><i class="fas fa-user"></i> Username</label>
             <input type="text" id="regUser" placeholder="Choose a username">
@@ -63,7 +62,6 @@
             if (!user || !pass || !confirm) { error.textContent = "Username and password are required."; return; }
             if (pass.length < 6) { error.textContent = "Password must be at least 6 characters."; return; }
             if (pass !== confirm) { error.textContent = "Passwords do not match."; return; }
-
             try {
                 const res = await fetch('auth.php?action=register', {
                     method: 'POST',
@@ -81,7 +79,8 @@
                 error.textContent = "Server error. Please try again.";
             }
         }
-
+       
+        
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') doRegister();
         });
