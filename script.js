@@ -60,89 +60,110 @@ const CONFIG = {
 // ==========================================
 const themes = {
     list: {
+        // TWO COLORS: violet + teal
         default: {
             name: '🌌 Default',
             '--bg-color': '#0f172a',
             '--surface-color': 'rgba(30, 41, 59, 0.7)',
-            '--surface-border': 'rgba(255, 255, 255, 0.1)',
+            '--surface-border': 'rgba(139, 92, 246, 0.2)',
             '--primary': '#8b5cf6',
-            '--primary-glow': 'rgba(139, 92, 246, 0.5)',
+            '--primary-glow': 'rgba(139, 92, 246, 0.45)',
             '--secondary': '#2dd4bf',
-            '--success': '#10b981',
-            '--error': '#ef4444',
+            '--success': '#2dd4bf',
+            '--error': '#8b5cf6',
             '--text-main': '#f8fafc',
-            '--text-dim': '#94a3b8',
+            '--text-dim': 'rgba(139, 92, 246, 0.6)',
             '--bg-gradient': 'radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0f172a 100%)'
         },
+        // TWO COLORS: sky blue + cyan
         ocean: {
             name: '🌊 Ocean',
-            '--bg-color': '#0c1a2e',
-            '--surface-color': 'rgba(10, 30, 60, 0.7)',
-            '--surface-border': 'rgba(56, 189, 248, 0.15)',
+            '--bg-color': '#020c1b',
+            '--surface-color': 'rgba(2, 20, 48, 0.75)',
+            '--surface-border': 'rgba(56, 189, 248, 0.2)',
             '--primary': '#38bdf8',
             '--primary-glow': 'rgba(56, 189, 248, 0.4)',
             '--secondary': '#06b6d4',
-            '--success': '#10b981',
-            '--error': '#f43f5e',
+            '--success': '#06b6d4',
+            '--error': '#38bdf8',
             '--text-main': '#e0f2fe',
-            '--text-dim': '#7dd3fc',
-            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #0c2a4a 0%, #050e1a 100%)'
+            '--text-dim': 'rgba(56, 189, 248, 0.55)',
+            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #041830 0%, #020c1b 100%)'
         },
+        // TWO COLORS: lime green + emerald
         forest: {
             name: '🌿 Forest',
-            '--bg-color': '#0a1a10',
-            '--surface-color': 'rgba(15, 35, 20, 0.75)',
-            '--surface-border': 'rgba(74, 222, 128, 0.15)',
+            '--bg-color': '#030d07',
+            '--surface-color': 'rgba(5, 22, 12, 0.8)',
+            '--surface-border': 'rgba(74, 222, 128, 0.18)',
             '--primary': '#4ade80',
             '--primary-glow': 'rgba(74, 222, 128, 0.4)',
             '--secondary': '#a3e635',
-            '--success': '#22c55e',
-            '--error': '#ef4444',
+            '--success': '#a3e635',
+            '--error': '#4ade80',
             '--text-main': '#f0fdf4',
-            '--text-dim': '#86efac',
-            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #14291a 0%, #060f09 100%)'
+            '--text-dim': 'rgba(74, 222, 128, 0.55)',
+            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #071a0d 0%, #030d07 100%)'
         },
+        // TWO COLORS: orange + pink
         sunset: {
             name: '🌅 Sunset',
-            '--bg-color': '#1a0a0a',
-            '--surface-color': 'rgba(40, 15, 15, 0.75)',
-            '--surface-border': 'rgba(251, 146, 60, 0.15)',
+            '--bg-color': '#120506',
+            '--surface-color': 'rgba(30, 8, 10, 0.8)',
+            '--surface-border': 'rgba(251, 146, 60, 0.2)',
             '--primary': '#fb923c',
             '--primary-glow': 'rgba(251, 146, 60, 0.4)',
             '--secondary': '#f472b6',
-            '--success': '#10b981',
-            '--error': '#ef4444',
+            '--success': '#f472b6',
+            '--error': '#fb923c',
             '--text-main': '#fff7ed',
-            '--text-dim': '#fdba74',
-            '--bg-gradient': 'radial-gradient(circle at 50% 30%, #2d0f05 0%, #0f0505 100%)'
+            '--text-dim': 'rgba(251, 146, 60, 0.6)',
+            '--bg-gradient': 'radial-gradient(circle at 50% 30%, #200a04 0%, #120506 100%)'
         },
+        // TWO COLORS: white + mid-grey
         monochrome: {
-            name: '⬛ Monochrome',
-            '--bg-color': '#0a0a0a',
-            '--surface-color': 'rgba(20, 20, 20, 0.8)',
-            '--surface-border': 'rgba(255, 255, 255, 0.08)',
+            name: '⬛ Mono',
+            '--bg-color': '#050505',
+            '--surface-color': 'rgba(15, 15, 15, 0.85)',
+            '--surface-border': 'rgba(255, 255, 255, 0.1)',
             '--primary': '#ffffff',
             '--primary-glow': 'rgba(255, 255, 255, 0.2)',
-            '--secondary': '#aaaaaa',
-            '--success': '#ffffff',
-            '--error': '#666666',
+            '--secondary': '#888888',
+            '--success': '#888888',
+            '--error': '#ffffff',
             '--text-main': '#ffffff',
-            '--text-dim': '#888888',
-            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #111 0%, #000 100%)'
+            '--text-dim': 'rgba(255, 255, 255, 0.4)',
+            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #0f0f0f 0%, #050505 100%)'
         },
+        // TWO COLORS: magenta + cyan
         neon: {
             name: '⚡ Neon',
-            '--bg-color': '#050010',
-            '--surface-color': 'rgba(10, 0, 30, 0.8)',
-            '--surface-border': 'rgba(255, 0, 255, 0.2)',
+            '--bg-color': '#03000f',
+            '--surface-color': 'rgba(8, 0, 28, 0.85)',
+            '--surface-border': 'rgba(255, 0, 255, 0.22)',
             '--primary': '#ff00ff',
             '--primary-glow': 'rgba(255, 0, 255, 0.5)',
             '--secondary': '#00ffff',
-            '--success': '#00ff88',
-            '--error': '#ff0055',
+            '--success': '#00ffff',
+            '--error': '#ff00ff',
             '--text-main': '#ffffff',
-            '--text-dim': '#cc88ff',
-            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #1a0030 0%, #050010 100%)'
+            '--text-dim': 'rgba(255, 0, 255, 0.55)',
+            '--bg-gradient': 'radial-gradient(circle at 50% 50%, #130020 0%, #03000f 100%)'
+        },
+        // TWO COLORS: violet + amber
+        dusk: {
+            name: '🌆 Dusk',
+            '--bg-color': '#0e0818',
+            '--surface-color': 'rgba(22, 10, 40, 0.8)',
+            '--surface-border': 'rgba(124, 58, 237, 0.22)',
+            '--primary': '#7c3aed',
+            '--primary-glow': 'rgba(124, 58, 237, 0.5)',
+            '--secondary': '#f59e0b',
+            '--success': '#f59e0b',
+            '--error': '#7c3aed',
+            '--text-main': '#fdf4e7',
+            '--text-dim': 'rgba(124, 58, 237, 0.6)',
+            '--bg-gradient': 'radial-gradient(circle at 40% 40%, #1e0e40 0%, #0e0818 100%)'
         }
     },
 
@@ -666,6 +687,43 @@ const ui = {
 
     handleProfileUpload: (e) => { auth.uploadAvatar(e); },
 
+    openCustomModal: () => {
+        const modal = document.getElementById('customTextModal');
+        if (!modal) return;
+        const saved = localStorage.getItem('customText') || '';
+        const textarea = document.getElementById('customTextInput');
+        if (textarea) {
+            textarea.value = saved;
+            document.getElementById('customCharCount').textContent = saved.trim().length + ' chars';
+        }
+        modal.style.display = 'flex';
+        setTimeout(() => textarea && textarea.focus(), 100);
+    },
+
+    closeCustomModal: () => {
+        const modal = document.getElementById('customTextModal');
+        if (modal) modal.style.display = 'none';
+        // If no custom text was saved, revert category select to general
+        const saved = localStorage.getItem('customText') || '';
+        if (!saved.trim()) {
+            const cat = document.getElementById('categorySelect');
+            if (cat) cat.value = 'general';
+        }
+    },
+
+    applyCustomText: () => {
+        const textarea = document.getElementById('customTextInput');
+        if (!textarea) return;
+        const text = textarea.value.trim();
+        if (!text) {
+            ui.showNotification('Please enter some text first!', 'error');
+            return;
+        }
+        localStorage.setItem('customText', text);
+        ui.closeCustomModal();
+        ui.showNotification('Custom text saved! Click Start to begin.', 'success');
+    },
+
     renderHeatmap: (missedKeys) => {
         const container = document.getElementById('heatmapKeyboard');
         if (!container) return;
@@ -759,6 +817,14 @@ const game = {
         if (startBtn) startBtn.addEventListener('click', () => game.start());
         if (restartBtn) restartBtn.addEventListener('click', () => game.reset());
         if (inputBox) inputBox.addEventListener('input', (e) => game.handleInput(e));
+
+        // Open custom text modal when category = custom is selected
+        const categorySelect = document.getElementById('categorySelect');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', () => {
+                if (categorySelect.value === 'custom') ui.openCustomModal();
+            });
+        }
 
         const displayContainer = document.getElementById('displayContainer');
         if (displayContainer) displayContainer.addEventListener('click', () => { if (game.isPlaying) inputBox.focus(); });
@@ -873,6 +939,14 @@ const game = {
             const words = [];
             for (let i = 0; i < count; i++) words.push(wordList[Math.floor(Math.random() * wordList.length)]);
             return words.join(' ');
+        }
+
+        if (cat === 'custom') {
+            const saved = localStorage.getItem('customText') || '';
+            if (saved.trim()) return saved.trim();
+            // No custom text yet — open the modal and abort
+            ui.openCustomModal();
+            return 'Please paste your custom text in the box above, then click Start again.';
         }
 
         try {
