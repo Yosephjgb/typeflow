@@ -78,14 +78,18 @@
                 <i class="fas fa-user-circle"></i> <span id="userNameSpan">Player: Guest</span>
             </span>
         </div>
-        <div class="nav-links" id="navLinks">
-            <a href="leaderboard.html" class="btn-outline"><i class="fas fa-trophy"></i> Leaderboard</a>
-            <a href="dashboard.html" class="btn-outline" id="dashboardBtn" style="display:none;"><i class="fas fa-chart-line"></i> Dashboard</a>
-            <button onclick="ui.toggleSettings()" class="btn-outline" id="settingsBtn" style="display:none;"><i class="fas fa-cog"></i></button>
-            <a href="login.html" class="btn-outline" id="loginBtn">Login</a>
-            <a href="login.html?mode=register" class="btn-primary" id="signupBtn">Create Account</a>
-            <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
-        </div>
+       <div class="nav-links" id="navLinks">
+    <a href="leaderboard.html" class="btn-outline"><i class="fas fa-trophy"></i> Leaderboard</a>
+    <a href="race.html" class="btn-outline" style="border-color:var(--primary); color:var(--primary);"><i class="fas fa-flag-checkered"></i> Race</a>
+    
+   
+    
+    <a href="dashboard.html" class="btn-outline" id="dashboardBtn" style="display:none;"><i class="fas fa-chart-line"></i> Dashboard</a>
+    <button onclick="ui.toggleSettings()" class="btn-outline" id="settingsBtn" style="display:none;"><i class="fas fa-cog"></i></button>
+    <a href="login.html" class="btn-outline" id="loginBtn">Login</a>
+    <a href="login.html?mode=register" class="btn-primary" id="signupBtn">Create Account</a>
+    <button id="logoutBtn" onclick="auth.logout()" class="btn-outline" style="display:none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+</div>
     </nav>
 
     <main class="main-container">
