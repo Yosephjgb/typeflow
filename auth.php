@@ -1,61 +1,79 @@
 <?php
-// auth.php - Registration & Login API
+// auth.php
+error_reporting(E_ALL);
+ini_set('display_errors', 0);          // Never leak HTML errors into JSON
 header('Content-Type: application/json');
 require_once 'db.php';
 session_start();
 
-// ─── CONFIG ───────────────────────────────────────────────
-define('APP_NAME',   'TypeFlow');
-define('APP_URL',    'http://yourdomain.com');   // ← update this
-define('FROM_EMAIL', 'noreply@yourdomain.com');  // ← update this
-// ──────────────────────────────────────────────────────────
-
 $action = $_GET['action'] ?? '';
-$data   = json_decode(file_get_contents('php://input'), true);
+$data   = json_decode(file_get_contents('php://input'), true) ?? [];
 
+// ──────────────────────────────────────────────
 // REGISTER
+// ──────────────────────────────────────────────
 if ($action === 'register') {
-    $user  = trim(strtolower($data['username'] ?? ''));
+    $user  = trim($data['username'] ?? '');
     $pass  = $data['password'] ?? '';
-    $email = trim(strtolower($data['email'] ?? ''));
+    $email = trim($data['email'] ?? '');
 
-    if (!$user || !$pass) {
-        echo json_encode(['success' => false, 'message' => 'Username and password required']); exit;
+    if (!$user || strlen($user) < 3) {
+        echo json_encode(['success' => false, 'message' => 'Username must be at least 3 characters.']);
+        exit;
     }
-    if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid email address']); exit;
+    if (!preg_match('/^[a-zA-Z]+$/', $user)) {
+        echo json_encode(['success' => false, 'message' => 'Username: letters only, no numbers or symbols.']);
+        exit;
     }
-    if (strlen($pass) < 6) {
-        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters']); exit;
+    if (!$pass || strlen($pass) < 6) {
+        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters.']);
+        exit;
+    }
+    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'A valid email address is required.']);
+        exit;
     }
 
     $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
     $stmt->execute([$user]);
-    if ($stmt->fetch()) { echo json_encode(['success' => false, 'message' => 'Username already taken']); exit; }
+    if ($stmt->fetch()) {
+        echo json_encode(['success' => false, 'message' => 'Username is already taken.']);
+        exit;
+    }
 
-    if ($email) {
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        if ($stmt->fetch()) { echo json_encode(['success' => false, 'message' => 'Email already registered']); exit; }
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    if ($stmt->fetch()) {
+        echo json_encode(['success' => false, 'message' => 'An account with this email already exists.']);
+        exit;
     }
 
     $hashed = password_hash($pass, PASSWORD_DEFAULT);
     $stmt   = $pdo->prepare("INSERT INTO users (username, password, email) VALUES (?, ?, ?)");
-    $stmt->execute([$user, $hashed, $email ?: null]);
+    $stmt->execute([$user, $hashed, $email]);
     $userId = $pdo->lastInsertId();
 
+    // Create empty stats row
     $stmt = $pdo->prepare("INSERT INTO stats (user_id, history) VALUES (?, ?)");
-    $stmt->execute([$userId, json_encode([])]);
+    $stmt->execute([$userId, '[]']);
 
     echo json_encode(['success' => true, 'message' => 'Account created!']);
+    exit;
 }
 
+// ──────────────────────────────────────────────
 // LOGIN
-elseif ($action === 'login') {
-    $user = $data['username'] ?? '';
+// ──────────────────────────────────────────────
+if ($action === 'login') {
+    $user = trim($data['username'] ?? '');
     $pass = $data['password'] ?? '';
 
-    $stmt   = $pdo->prepare("SELECT id, password, avatar FROM users WHERE username = ?");
+    if (!$user || !$pass) {
+        echo json_encode(['success' => false, 'message' => 'Username and password are required.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT id, password, avatar FROM users WHERE username = ?");
     $stmt->execute([$user]);
     $dbUser = $stmt->fetch();
 
@@ -65,129 +83,118 @@ elseif ($action === 'login') {
         $_SESSION['avatar']   = $dbUser['avatar'];
         echo json_encode(['success' => true, 'username' => $user, 'avatar' => $dbUser['avatar']]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid username or password']);
+        echo json_encode(['success' => false, 'message' => 'Invalid username or password.']);
     }
+    exit;
 }
 
-// FORGOT PASSWORD — sends email with reset link
-elseif ($action === 'forgot_password') {
-    $identifier = trim(strtolower($data['identifier'] ?? ''));
-
-    if (!$identifier) {
-        echo json_encode(['success' => false, 'message' => 'Please enter your username or email']); exit;
-    }
-
-    $stmt = $pdo->prepare("SELECT id, username, email FROM users WHERE username = ? OR email = ? LIMIT 1");
-    $stmt->execute([$identifier, $identifier]);
-    $user = $stmt->fetch();
-
-    // Always return success to avoid user enumeration
-    if (!$user || !$user['email']) {
-        echo json_encode(['success' => true, 'message' => 'If that account exists and has an email, a reset link has been sent.']); exit;
-    }
-
-    $token   = bin2hex(random_bytes(32));
-    $expires = date('Y-m-d H:i:s', time() + 3600);
-
-    $stmt = $pdo->prepare("UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?");
-    $stmt->execute([$token, $expires, $user['id']]);
-
-    $resetUrl = APP_URL . "/reset-password.html?token=" . urlencode($token);
-    $to       = $user['email'];
-    $subject  = APP_NAME . ' — Password Reset Request';
-    $body     = "Hi {$user['username']},\n\n"
-              . "We received a request to reset your " . APP_NAME . " password.\n\n"
-              . "Click the link below to set a new password (valid for 1 hour):\n"
-              . $resetUrl . "\n\n"
-              . "If you didn't request this, you can safely ignore this email.\n\n"
-              . "— The " . APP_NAME . " Team";
-    $headers  = "From: " . FROM_EMAIL . "\r\nReply-To: " . FROM_EMAIL . "\r\nX-Mailer: PHP/" . phpversion();
-
-    $sent = mail($to, $subject, $body, $headers);
-
-    if ($sent) {
-        echo json_encode(['success' => true, 'message' => 'If that account exists and has an email, a reset link has been sent.']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Email could not be sent. Please ask your host to enable PHP mail() or configure SMTP.']);
-    }
-}
-
-// RESET PASSWORD — validates token, sets new password
-elseif ($action === 'reset_password') {
-    $token       = $data['token']           ?? '';
-    $newPass     = $data['newPassword']     ?? '';
-    $confirmPass = $data['confirmPassword'] ?? '';
-
-    if (!$token || !$newPass || !$confirmPass) {
-        echo json_encode(['success' => false, 'message' => 'All fields are required']); exit;
-    }
-    if (strlen($newPass) < 6) {
-        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters']); exit;
-    }
-    if ($newPass !== $confirmPass) {
-        echo json_encode(['success' => false, 'message' => 'Passwords do not match']); exit;
-    }
-
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW()");
-    $stmt->execute([$token]);
-    $user = $stmt->fetch();
-
-    if (!$user) {
-        echo json_encode(['success' => false, 'message' => 'Reset link is invalid or has expired. Please request a new one.']); exit;
-    }
-
-    $hashed = password_hash($newPass, PASSWORD_DEFAULT);
-    $stmt   = $pdo->prepare("UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?");
-    $stmt->execute([$hashed, $user['id']]);
-
-    echo json_encode(['success' => true, 'message' => 'Password reset successfully! You can now log in.']);
-}
-
-// LOGOUT
-elseif ($action === 'logout') {
-    session_destroy();
-    echo json_encode(['success' => true]);
-}
-
-// UPDATE PROFILE
-elseif ($action === 'update_profile') {
-    if (!isset($_SESSION['user_id'])) {
-        echo json_encode(['success' => false, 'message' => 'Not logged in']); exit;
-    }
-
-    $userId  = $_SESSION['user_id'];
-    $newPass = $data['newPassword'] ?? '';
-    $oldPass = $data['oldPassword'] ?? '';
-
-    if ($newPass) {
-        $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
-
-        if (!$user || !password_verify($oldPass, $user['password'])) {
-            echo json_encode(['success' => false, 'message' => 'Current password incorrect']); exit;
-        }
-
-        $hashed = password_hash($newPass, PASSWORD_DEFAULT);
-        $stmt   = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-        $stmt->execute([$hashed, $userId]);
-    }
-
-    echo json_encode(['success' => true, 'message' => 'Profile updated!']);
-}
-
+// ──────────────────────────────────────────────
 // CHECK SESSION
-elseif ($action === 'check') {
-    if (isset($_SESSION['username'])) {
+// ──────────────────────────────────────────────
+if ($action === 'check') {
+    if (isset($_SESSION['user_id'])) {
+        // Always read avatar from DB (not session) so uploads take effect immediately
         $stmt = $pdo->prepare("SELECT avatar FROM users WHERE id = ?");
         $stmt->execute([$_SESSION['user_id']]);
-        $row    = $stmt->fetch();
+        $row = $stmt->fetch();
         $avatar = $row['avatar'] ?? 'default-avatar.png';
-        $_SESSION['avatar'] = $avatar;
-
-        echo json_encode(['loggedIn' => true, 'username' => $_SESSION['username'], 'avatar' => $avatar]);
+        $_SESSION['avatar'] = $avatar; // keep session in sync
+        echo json_encode([
+            'loggedIn' => true,
+            'username' => $_SESSION['username'],
+            'avatar'   => $avatar
+        ]);
     } else {
         echo json_encode(['loggedIn' => false]);
     }
+    exit;
 }
+
+// ──────────────────────────────────────────────
+// LOGOUT
+// ──────────────────────────────────────────────
+if ($action === 'logout') {
+    session_destroy();
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+// ──────────────────────────────────────────────
+// FORGOT PASSWORD (email + new password)
+// ──────────────────────────────────────────────
+if ($action === 'forgot_password') {
+    $email       = trim($data['email']           ?? '');
+    $newPassword = trim($data['newPassword']     ?? '');
+    $confirm     = trim($data['confirmPassword'] ?? '');
+
+    if (!$email || !$newPassword || !$confirm) {
+        echo json_encode(['success' => false, 'message' => 'All fields are required.']);
+        exit;
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Please enter a valid email address.']);
+        exit;
+    }
+    if (strlen($newPassword) < 6) {
+        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters.']);
+        exit;
+    }
+    if ($newPassword !== $confirm) {
+        echo json_encode(['success' => false, 'message' => 'Passwords do not match.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $dbUser = $stmt->fetch();
+
+    if (!$dbUser) {
+        // Generic message so we don't reveal whether an email exists
+        echo json_encode(['success' => false, 'message' => 'No account found with that email address.']);
+        exit;
+    }
+
+    $hashed = password_hash($newPassword, PASSWORD_DEFAULT);
+    $stmt   = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+    $stmt->execute([$hashed, $dbUser['id']]);
+
+    echo json_encode(['success' => true, 'message' => 'Password reset successfully.']);
+    exit;
+}
+
+// ──────────────────────────────────────────────
+// UPDATE PROFILE (change password while logged in)
+// ──────────────────────────────────────────────
+if ($action === 'update_profile') {
+    if (!isset($_SESSION['user_id'])) {
+        echo json_encode(['success' => false, 'message' => 'Not logged in.']);
+        exit;
+    }
+
+    $oldPass = $data['oldPassword'] ?? '';
+    $newPass = $data['newPassword'] ?? '';
+
+    if (!$oldPass || !$newPass) {
+        echo json_encode(['success' => false, 'message' => 'Both old and new passwords are required.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $row = $stmt->fetch();
+
+    if (!$row || !password_verify($oldPass, $row['password'])) {
+        echo json_encode(['success' => false, 'message' => 'Current password is incorrect.']);
+        exit;
+    }
+
+    $hashed = password_hash($newPass, PASSWORD_DEFAULT);
+    $stmt   = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+    $stmt->execute([$hashed, $_SESSION['user_id']]);
+
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+echo json_encode(['success' => false, 'message' => 'Invalid action.']);
 ?>
