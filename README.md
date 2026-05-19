@@ -26,3 +26,5 @@ Simply open `index.html` in your browser. All stats are saved locally to your br
 - [Chart.js](https://www.chartjs.org/) for analytics.
 - [FontAwesome](https://fontawesome.com/) for icons.
 - [Inter](https://fonts.google.com/specimen/Inter) & [Outfit](https://fonts.google.com/specimen/Outfit) typography.
+- ## 📌 About the Project
+This project is a web-based application designed to provide users with an interactive dashboard, authentication system, and performance tracking features.
